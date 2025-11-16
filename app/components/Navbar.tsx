@@ -1,11 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { ShoppingCart, User, Star } from 'lucide-react'
+import { ShoppingCart, User, Star, Menu, X } from 'lucide-react'
 import { useCart } from './CartContext'
+import { useState } from 'react'
 
 export default function Navbar() {
   const { cartCount } = useCart()
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
 
   return (
     <nav className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white shadow-2xl sticky top-0 z-50">
@@ -22,7 +24,7 @@ export default function Navbar() {
             </div>
           </Link>
 
-          {/* Navigation Links */}
+          {/* Desktop Navigation */}
           <div className="hidden md:flex gap-6 items-center">
             <Link href="/" className="hover:text-blue-400 transition-colors">
               Home
@@ -52,7 +54,70 @@ export default function Navbar() {
               Login
             </Link>
           </div>
+
+          {/* Mobile Menu Button */}
+          <button 
+            className="md:hidden"
+            onClick={() => setShowMobileMenu(!showMobileMenu)}
+          >
+            {showMobileMenu ? <X size={28} /> : <Menu size={28} />}
+          </button>
         </div>
+
+        {/* Mobile Menu */}
+        {showMobileMenu && (
+          <div className="md:hidden pb-4 pt-2 space-y-3 border-t border-gray-700">
+            <Link 
+              href="/" 
+              onClick={() => setShowMobileMenu(false)}
+              className="block hover:text-blue-400 transition-colors py-2"
+            >
+              Home
+            </Link>
+            <Link 
+              href="/products" 
+              onClick={() => setShowMobileMenu(false)}
+              className="block hover:text-blue-400 transition-colors py-2 font-semibold"
+            >
+              Browse Products
+            </Link>
+            <Link 
+              href="/premium" 
+              onClick={() => setShowMobileMenu(false)}
+              className="block hover:text-yellow-400 transition-colors py-2 flex items-center gap-2"
+            >
+              <Star size={16} fill="currentColor" />
+              Premium Retailers
+            </Link>
+            <Link 
+              href="/become-retailer" 
+              onClick={() => setShowMobileMenu(false)}
+              className="block hover:text-blue-400 transition-colors py-2"
+            >
+              Sell on Stone Connect
+            </Link>
+            <Link 
+              href="/cart" 
+              onClick={() => setShowMobileMenu(false)}
+              className="block hover:text-blue-400 transition-colors py-2 flex items-center gap-2"
+            >
+              <ShoppingCart size={20} />
+              Shopping Cart
+              {cartCount > 0 && (
+                <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-bold">
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+            <Link 
+              href="/login" 
+              onClick={() => setShowMobileMenu(false)}
+              className="block bg-blue-600 px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors text-center font-semibold"
+            >
+              Login
+            </Link>
+          </div>
+        )}
       </div>
     </nav>
   )
