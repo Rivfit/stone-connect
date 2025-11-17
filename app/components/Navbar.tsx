@@ -90,7 +90,7 @@ export default function Navbar() {
               Premium Retailers
             </Link>
             <Link 
-              href="/become-retailer" 
+              href="/retailer/signup" 
               onClick={() => setShowMobileMenu(false)}
               className="block hover:text-blue-400 transition-colors py-2"
             >
