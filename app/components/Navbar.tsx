@@ -36,7 +36,7 @@ export default function Navbar() {
               <Star size={16} fill="currentColor" />
               Premium
             </Link>
-            <Link href="/become-retailer" className="hover:text-blue-400 transition-colors">
+            <Link href="/retailer/signup" className="hover:text-blue-400 transition-colors">
               Sell on Stone Connect
             </Link>
             
