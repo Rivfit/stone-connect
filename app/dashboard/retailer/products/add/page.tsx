@@ -5,13 +5,15 @@ import { useRouter } from 'next/navigation'
 import { useRetailerAuth } from '../../../../components/RetailerAuthContext'
 import { createClient } from '@/lib/supabase/client'
 import RetailerNav from '../../../../components/RetailerNav'
-import { ArrowLeft, Upload, Check } from 'lucide-react'
+import { ArrowLeft, Upload, Check, X, Image as ImageIcon } from 'lucide-react'
 import Link from 'next/link'
 
 export default function AddProductPage() {
   const router = useRouter()
   const { retailer, isLoading } = useRetailerAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [uploadingImages, setUploadingImages] = useState(false)
+  const [uploadedImages, setUploadedImages] = useState<string[]>([])
 
   const [formData, setFormData] = useState({
     type: '',
@@ -42,14 +44,59 @@ export default function AddProductPage() {
     })
   }
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    setUploadingImages(true)
+
+    try {
+      const uploadPromises = Array.from(files).map(async (file) => {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('upload_preset', 'stone_connect_unsigned')
+        formData.append('cloud_name', process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!)
+
+        const response = await fetch(
+          `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+          {
+            method: 'POST',
+            body: formData,
+          }
+        )
+
+        const data = await response.json()
+        return data.secure_url
+      })
+
+      const urls = await Promise.all(uploadPromises)
+      setUploadedImages([...uploadedImages, ...urls])
+      alert(`✅ ${urls.length} image(s) uploaded successfully!`)
+    } catch (error) {
+      console.error('Upload error:', error)
+      alert('❌ Error uploading images. Please try again.')
+    } finally {
+      setUploadingImages(false)
+    }
+  }
+
+  const removeImage = (index: number) => {
+    setUploadedImages(uploadedImages.filter((_, i) => i !== index))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (uploadedImages.length === 0) {
+      if (!confirm('No images uploaded. Continue without images?')) {
+        return
+      }
+    }
+
     setIsSubmitting(true)
 
     try {
       const supabase = createClient()
-
-      // Split colors by comma
       const colorsArray = formData.colors.split(',').map(c => c.trim())
 
       const { data, error } = await supabase
@@ -60,6 +107,7 @@ export default function AddProductPage() {
           colors: colorsArray,
           base_price: parseFloat(formData.basePrice),
           description: formData.description,
+          images: uploadedImages.length > 0 ? uploadedImages : [],
           is_active: true,
           reviews_count: 0,
           purchases_count: 0,
@@ -95,6 +143,60 @@ export default function AddProductPage() {
         <h1 className="text-4xl font-bold mb-8">Add New Product</h1>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-xl p-8 shadow-lg space-y-6">
+          {/* Image Upload Section */}
+          <div className="border-2 border-dashed border-gray-300 rounded-xl p-6">
+            <label className="block font-semibold mb-3 text-gray-700 flex items-center gap-2">
+              <ImageIcon size={24} />
+              Product Images
+            </label>
+            
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleImageUpload}
+              disabled={uploadingImages}
+              className="hidden"
+              id="image-upload"
+            />
+            
+            <label
+              htmlFor="image-upload"
+              className={`flex flex-col items-center justify-center py-8 cursor-pointer hover:bg-gray-50 rounded-lg transition-colors ${
+                uploadingImages ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              <Upload className="text-blue-600 mb-3" size={48} />
+              <p className="text-lg font-semibold text-gray-700 mb-1">
+                {uploadingImages ? 'Uploading...' : 'Click to upload images'}
+              </p>
+              <p className="text-sm text-gray-500">PNG, JPG up to 10MB each</p>
+            </label>
+
+            {/* Image Preview Grid */}
+            {uploadedImages.length > 0 && (
+              <div className="mt-6 grid grid-cols-3 gap-4">
+                {uploadedImages.map((url, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={url}
+                      alt={`Product ${index + 1}`}
+                      className="w-full h-32 object-cover rounded-lg border-2 border-gray-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Rest of Form */}
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <label className="block font-semibold mb-2 text-gray-700">
@@ -184,21 +286,9 @@ export default function AddProductPage() {
             />
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <Upload className="text-blue-600 flex-shrink-0 mt-1" size={20} />
-              <div>
-                <p className="font-semibold text-blue-900">Image Upload Coming Soon</p>
-                <p className="text-sm text-blue-700">
-                  We're working on image upload functionality. For now, products will display with placeholder images.
-                </p>
-              </div>
-            </div>
-          </div>
-
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || uploadingImages}
             className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-4 rounded-xl font-bold text-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isSubmitting ? (

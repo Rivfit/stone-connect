@@ -12,6 +12,7 @@ interface Product {
   material: string
   colors: string[]
   base_price: number
+  images?: string[]
   description: string
   reviews_count: number
   purchases_count: number
@@ -75,11 +76,35 @@ export default function ProductModal({ product, onClose }: ProductModalProps) {
         {/* Content */}
         <div className="p-6">
           <div className="grid md:grid-cols-2 gap-8">
-            {/* Left: Image */}
+            {/* Left: Image Gallery */}
             <div>
-              <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl h-96 flex items-center justify-center mb-4">
-                <span className="text-9xl">🪦</span>
-              </div>
+              {product.images && product.images.length > 0 ? (
+                <div>
+                  <div className="bg-gray-100 rounded-xl h-96 overflow-hidden mb-4">
+                    <img
+                      src={product.images[0]}
+                      alt={product.type}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  {product.images.length > 1 && (
+                    <div className="grid grid-cols-4 gap-2">
+                      {product.images.slice(0, 4).map((img, idx) => (
+                        <img
+                          key={idx}
+                          src={img}
+                          alt={`${product.type} ${idx + 1}`}
+                          className="w-full h-20 object-cover rounded-lg border-2 border-gray-200 cursor-pointer hover:border-blue-500 transition-colors"
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl h-96 flex items-center justify-center mb-4">
+                  <span className="text-9xl">🪦</span>
+                </div>
+              )}
               
               {/* Stats */}
               <div className="grid grid-cols-3 gap-4 text-center">

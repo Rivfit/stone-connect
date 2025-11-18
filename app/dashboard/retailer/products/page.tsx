@@ -14,6 +14,7 @@ interface Product {
   material: string
   colors: string[]
   base_price: number
+  images?: string[]
   description: string
   is_active: boolean
   reviews_count: number
@@ -132,8 +133,18 @@ export default function ManageProductsPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {products.map((product) => (
               <div key={product.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-                <div className="bg-gradient-to-br from-gray-100 to-gray-200 h-48 flex items-center justify-center">
-                  <span className="text-6xl">🪦</span>
+                <div className="relative h-48 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
+                  {product.images && product.images.length > 0 ? (
+                    <img
+                      src={product.images[0]}
+                      alt={product.type}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <span className="text-6xl">🪦</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-6">

@@ -8,6 +8,7 @@ interface Product {
   material: string
   colors: string[]
   base_price: number
+  images?: string[]
   description: string
   reviews_count: number
   purchases_count: number
@@ -44,9 +45,19 @@ export default function ProductCard({ product, onViewDetails }: ProductCardProps
         </div>
       )}
 
-      {/* Product Image Placeholder */}
-      <div className="bg-gradient-to-br from-gray-100 to-gray-200 h-56 flex items-center justify-center">
-        <span className="text-7xl">🪦</span>
+      {/* Product Image */}
+      <div className="relative h-56 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
+        {product.images && product.images.length > 0 ? (
+          <img
+            src={product.images[0]}
+            alt={product.type}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <span className="text-7xl">🪦</span>
+          </div>
+        )}
       </div>
 
       {/* Product Details */}
