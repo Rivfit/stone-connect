@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '../../lib/supabase/client'
+import { supabase } from '@/lib/supabase/client'
 import ProductCard from '../components/ProductCard'
 import ProductModal from '../components/ProductModal'
 import Navbar from '../components/Navbar'
@@ -35,21 +35,20 @@ export default function ProductsPage() {
   }, [])
 
   const fetchProducts = async () => {
-    const supabase = createClient()
+ const { data, error } = await supabase
+  .from('products')
+  .select(`
+    *,
+    retailers (
+      business_name,
+      address,
+      rating,
+      is_premium
+    )
+  `)
+  .eq('is_active', true)
+  .order('created_at', { ascending: false })
 
-    const { data, error } = await supabase
-      .from('products')
-      .select(`
-        *,
-        retailers (
-          business_name,
-          address,
-          rating,
-          is_premium
-        )
-      `)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
 
     if (error) {
       console.error('Error fetching products:', error)

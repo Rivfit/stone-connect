@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRetailerAuth } from '../../../../components/RetailerAuthContext'
-import { createClient } from '@/lib/supabase/client'
+import { supabase } from '@/lib/supabase/client'
 import RetailerNav from '../../../../components/RetailerNav'
 import { ArrowLeft, Upload, Check, X, Image as ImageIcon } from 'lucide-react'
 import Link from 'next/link'
@@ -96,7 +96,7 @@ export default function AddProductPage() {
     setIsSubmitting(true)
 
     try {
-      const supabase = createClient()
+      
       const colorsArray = formData.colors.split(',').map(c => c.trim())
 
       const { data, error } = await supabase

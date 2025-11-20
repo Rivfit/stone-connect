@@ -13,9 +13,13 @@ export default function Navbar() {
     <nav className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white shadow-2xl sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center h-16">
-          {/* Logo */}
+          {/* Logo with Image */}
           <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <div className="text-3xl">🪦</div>
+            <img 
+              src="/stone.png" 
+              alt="Stone Connect Logo" 
+              className="h-20 w-auto object-contain"
+            />
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
                 Stone Connect

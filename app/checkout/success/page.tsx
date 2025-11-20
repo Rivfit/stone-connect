@@ -1,9 +1,17 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { CheckCircle, ArrowRight, Mail, Download } from 'lucide-react'
 
 export default function SuccessPage() {
+  const [orderRef, setOrderRef] = useState('')
+
+  useEffect(() => {
+    // Generate order reference client-side only
+    setOrderRef(`SC-${Date.now().toString(36).toUpperCase()}`)
+  }, [])
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-6">
       <div className="max-w-2xl w-full">
@@ -74,9 +82,11 @@ export default function SuccessPage() {
             </Link>
           </div>
 
-          <p className="text-sm text-gray-500 mt-8">
-            Order reference: SC-{Date.now().toString(36).toUpperCase()}
-          </p>
+          {orderRef && (
+            <p className="text-sm text-gray-500 mt-8">
+              Order reference: {orderRef}
+            </p>
+          )}
         </div>
       </div>
     </div>

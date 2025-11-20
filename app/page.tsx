@@ -1,11 +1,20 @@
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
       <div className="max-w-7xl mx-auto px-6 py-20">
         <div className="text-center text-white">
-          <div className="text-8xl mb-6">🪦</div>
+         
+          <div className="flex justify-center mb-6">
+            <img 
+              src="/stone.png" 
+              alt="Stone Connect Logo" 
+              className="w-auto h-150 object-contain"
+            />
+          </div>
+          
           <h1 className="text-6xl font-bold mb-6">Stone Connect</h1>
           <p className="text-2xl mb-8 text-gray-200">
             South Africa's Premier Memorial Marketplace
@@ -61,9 +70,4 @@ export default function Home() {
       </footer>
     </main>
   )
-}<Link 
-  href="/products"
-  className="bg-white text-gray-900 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-all"
->
-  Browse Memorials
-</Link>
+}
