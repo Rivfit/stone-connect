@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import queryString from 'query-string'
 import crypto from 'crypto'
-import { saveOrder } from '../../../lib/orders'
+import { saveOrder } from '../../../lib/supabase/orders'
 
 export async function POST(req: NextRequest) {
   const { cart, cartTotal, customer } = await req.json()

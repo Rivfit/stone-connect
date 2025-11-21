@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getOrderById, updateOrderStatus } from '@/lib/supabase/orders'
-import { sendEmail } from '@/lib/email'
-import { buyerEmailTemplate, retailerEmailTemplate } from '@/lib/emailTemplates'
+import { sendEmail } from '@/lib/supabase/email'
+import { buyerEmailTemplate, retailerEmailTemplate } from '@/lib/supabase/emailTemplates'
 
 export async function POST(req: NextRequest) {
   try {

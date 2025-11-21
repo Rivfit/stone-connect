@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRetailerAuth } from '../../../components/RetailerAuthContext'
-import { createClient } from '@/lib/supabase/client'
+import { supabase } from '@/lib/supabase/client'
 import RetailerNav from '../../../components/RetailerNav'
 import Link from 'next/link'
 import { Plus, Eye, TrendingUp, Edit, Trash2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
 
 interface Product {
   id: string
@@ -42,11 +43,22 @@ export default function ManageProductsPage() {
 
   const fetchProducts = async () => {
     try {
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: false })
+      
+    const { data, error } = await supabase
+  .from('products')
+  .select(`
+    *,
+    retailers (
+      business_name,
+      address,
+      rating,
+      is_premium
+    )
+  `)
+  .eq('is_active', true)
+  .order('created_at', { ascending: false })
+
+     
 
       if (error) throw error
       setProducts(data || [])
@@ -61,7 +73,7 @@ export default function ManageProductsPage() {
     if (!confirm('Are you sure you want to delete this product?')) return
 
     try {
-      const supabase = createClient()
+      
       const { error } = await supabase
         .from('products')
         .delete()
