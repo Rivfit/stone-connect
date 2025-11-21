@@ -176,8 +176,8 @@ export async function POST(req: NextRequest) {
     const merchant_key = process.env.PAYFAST_MERCHANT_KEY || 'cs3kbgt7v5usq'
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
     
-    const return_url = `${baseUrl}/payment/success`
-    const cancel_url = `${baseUrl}/payment/cancelled`
+    const return_url = `${baseUrl}/checkout/success`
+    const cancel_url = `${baseUrl}/checkout/cancel`
     const notify_url = `${baseUrl}/api/payfast-webhook`
 
     const payfastParams = {
