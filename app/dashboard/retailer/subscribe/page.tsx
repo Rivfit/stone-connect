@@ -28,7 +28,7 @@ export default function SubscribePage() {
         body: JSON.stringify({
           retailer_id: retailer?.id,
           email: retailer?.email,
-          amount: 499
+          amount: 1500
         })
       })
 

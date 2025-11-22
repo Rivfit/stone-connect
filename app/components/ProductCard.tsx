@@ -16,6 +16,8 @@ interface Product {
   retailers: {
     business_name: string
     address: string
+    city: string
+    province: string
     rating: number
     is_premium: boolean
   } | null

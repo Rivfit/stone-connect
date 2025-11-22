@@ -179,7 +179,7 @@ export default function RetailerSignupPage() {
                 <label htmlFor="premium" className="flex-1 cursor-pointer">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-2xl">⭐</span>
-                    <span className="font-bold text-xl">Premium Membership - R499/month</span>
+                    <span className="font-bold text-xl">Premium Membership - R1500/month</span>
                   </div>
                   <div className="grid md:grid-cols-2 gap-2 text-sm">
                     <div className="flex items-center gap-2">

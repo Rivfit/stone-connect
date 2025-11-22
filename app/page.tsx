@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import Footer from '@/app/components/Footer'
 
 export default function Home() {
   return (
@@ -62,12 +63,7 @@ export default function Home() {
         </div>
       </div>
       
-      <footer className="bg-black/50 text-white py-8 mt-20">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <p className="text-gray-400">© 2025 Stone Connect. All rights reserved.</p>
-          <p className="text-gray-400 text-sm mt-2">South Africa's Memorial Marketplace</p>
-        </div>
-      </footer>
+      <Footer />
     </main>
   )
 }

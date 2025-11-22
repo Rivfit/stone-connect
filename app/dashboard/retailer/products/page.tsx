@@ -51,6 +51,8 @@ export default function ManageProductsPage() {
     retailers (
       business_name,
       address,
+      city,
+      province,
       rating,
       is_premium
     )

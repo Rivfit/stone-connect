@@ -3,10 +3,11 @@ import { supabase } from '@/lib/supabase/client'
 
 export async function POST(req: NextRequest) {
   try {
-    const data = await req.json()
+    const body = await req.json()
+
     const { data: order, error } = await supabase
       .from('orders')
-      .insert(data)
+      .insert([body])
       .select()
       .single()
 
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(order)
   } catch (err) {
-    console.error(err)
+    console.error('Order API error:', err)
     return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
   }
 }
