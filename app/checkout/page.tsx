@@ -21,6 +21,7 @@ export default function CheckoutPage() {
     postalCode: ''
   })
 
+  const [agreeToTerms, setAgreeToTerms] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
 
   const formatPrice = (price: number) =>
@@ -34,6 +35,12 @@ export default function CheckoutPage() {
     e.preventDefault()
     if (cart.length === 0) return alert('Your cart is empty!')
 
+    // Check if terms are agreed
+    if (!agreeToTerms) {
+      alert('Please agree to the Terms & Conditions to proceed')
+      return
+    }
+
     setIsProcessing(true)
 
     try {
@@ -43,14 +50,16 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           cart,
           cartTotal,
-          customer: formData
+          customer: formData,
+          agreedToTerms: true,
+          agreedAt: new Date().toISOString()
         }),
       })
 
       const order = await res.json()
       if (!order || order.error) throw new Error('Order creation failed')
 
-      clearCart() // ✅ empty cart
+      clearCart()
       window.location.href = order.payfastUrl
     } catch (err) {
       console.error(err)
@@ -133,17 +142,67 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
+              {/* Terms & Conditions Checkbox */}
+              <div className="mb-6 p-4 border-2 border-blue-200 bg-blue-50 rounded-lg">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={agreeToTerms}
+                    onChange={(e) => setAgreeToTerms(e.target.checked)}
+                    className="mt-1 w-5 h-5 flex-shrink-0"
+                    required
+                  />
+                  <span className="text-gray-700">
+                    I agree to the{' '}
+                    <Link href="/legal/terms" target="_blank" className="text-blue-600 hover:text-blue-800 font-semibold underline">
+                      Terms & Conditions
+                    </Link>
+                    {', '}
+                    <Link href="/legal/privacy" target="_blank" className="text-blue-600 hover:text-blue-800 font-semibold underline">
+                      Privacy Policy
+                    </Link>
+                    {', and '}
+                    <Link href="/legal/refund" target="_blank" className="text-blue-600 hover:text-blue-800 font-semibold underline">
+                      Refund Policy
+                    </Link>
+                    {' '}*
+                  </span>
+                </label>
+              </div>
+
               {/* Payment Button */}
-              <button type="submit" disabled={isProcessing} className="w-full mt-8 bg-gradient-to-r from-green-600 to-green-700 text-white py-4 rounded-xl text-xl font-bold hover:from-green-700 hover:to-green-800 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+              <button 
+                type="submit" 
+                disabled={isProcessing || !agreeToTerms} 
+                className="w-full mt-8 bg-gradient-to-r from-green-600 to-green-700 text-white py-4 rounded-xl text-xl font-bold hover:from-green-700 hover:to-green-800 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 {isProcessing ? 'Processing...' : `Pay ${formatPrice(cartTotal)}`}
               </button>
+
+              <p className="text-sm text-gray-500 text-center mt-4">
+                🔒 Secure payment processed by PayFast
+              </p>
             </form>
           </div>
 
           {/* Right: Order Summary */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl p-6 shadow-lg sticky top-24">
-              {/* You can render cart summary here */}
+              <h3 className="text-xl font-bold mb-4">Order Summary</h3>
+              <div className="space-y-3">
+                {cart.map((item) => (
+                  <div key={item.id} className="flex justify-between text-sm">
+                    <span>{item.productType}</span>
+                    <span className="font-semibold">{formatPrice(item.basePrice)}</span>
+                  </div>
+                ))}
+                <div className="border-t pt-3 mt-3">
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Total:</span>
+                    <span className="text-green-600">{formatPrice(cartTotal)}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

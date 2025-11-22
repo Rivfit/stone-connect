@@ -15,6 +15,7 @@ export default function RetailerSignupPage() {
     address: '',
     isPremium: false
   })
+  const [agreeToAgreement, setAgreeToAgreement] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -27,13 +28,40 @@ export default function RetailerSignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!agreeToAgreement) {
+      alert('Please agree to the Seller Agreement to continue')
+      return
+    }
+
     setIsLoading(true)
 
-    // Simulate signup
-    setTimeout(() => {
-      alert(`✅ Account Created!\n\nBusiness: ${formData.businessName}\nEmail: ${formData.email}\n\nYou can now login with:\nEmail: ${formData.email}\nPassword: demo123`)
-      router.push('/retailer/login')
-    }, 1500)
+    try {
+      // Call API to create retailer account
+      const response = await fetch('/api/retailer/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          agreedToAgreement: true,
+          agreedAt: new Date().toISOString()
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        alert(`✅ Account Created!\n\nBusiness: ${formData.businessName}\n\nA confirmation email with the Seller Agreement has been sent to ${formData.email}`)
+        router.push('/retailer/login')
+      } else {
+        alert('Error creating account: ' + (data.error || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Signup error:', error)
+      alert('Something went wrong. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -151,7 +179,7 @@ export default function RetailerSignupPage() {
                 <label htmlFor="premium" className="flex-1 cursor-pointer">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-2xl">⭐</span>
-                    <span className="font-bold text-xl">Premium Membership - R1,500/month</span>
+                    <span className="font-bold text-xl">Premium Membership - R499/month</span>
                   </div>
                   <div className="grid md:grid-cols-2 gap-2 text-sm">
                     <div className="flex items-center gap-2">
@@ -175,10 +203,53 @@ export default function RetailerSignupPage() {
               </div>
             </div>
 
+            {/* Seller Agreement Checkbox */}
+            <div className="border-2 border-red-200 bg-red-50 p-4 rounded-lg">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={agreeToAgreement}
+                  onChange={(e) => setAgreeToAgreement(e.target.checked)}
+                  className="mt-1 w-5 h-5 flex-shrink-0"
+                  required
+                />
+                <span className="text-gray-700">
+                  I have read and agree to the{' '}
+                  <Link 
+                    href="/legal/seller-agreement" 
+                    target="_blank" 
+                    className="text-blue-600 hover:text-blue-800 font-semibold underline"
+                  >
+                    Seller Agreement
+                  </Link>
+                  {', '}
+                  <Link 
+                    href="/legal/seller-terms" 
+                    target="_blank" 
+                    className="text-blue-600 hover:text-blue-800 font-semibold underline"
+                  >
+                    Terms of Service
+                  </Link>
+                  {', and '}
+                  <Link 
+                    href="/legal/privacy" 
+                    target="_blank" 
+                    className="text-blue-600 hover:text-blue-800 font-semibold underline"
+                  >
+                    Privacy Policy
+                  </Link>
+                  {' '}*
+                </span>
+              </label>
+              <p className="text-xs text-gray-600 mt-2 ml-8">
+                A copy of the Seller Agreement will be sent to your email upon registration.
+              </p>
+            </div>
+
             <button
               type="submit"
-              disabled={isLoading}
-              className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-4 rounded-xl font-bold text-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg disabled:opacity-50"
+              disabled={isLoading || !agreeToAgreement}
+              className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-4 rounded-xl font-bold text-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Creating Account...' : 'Create Retailer Account'}
             </button>
