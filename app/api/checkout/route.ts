@@ -116,6 +116,45 @@ export async function POST(req: NextRequest) {
           `
         })
 
+        // Send business email
+        await transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: process.env.EMAIL_USER,
+          subject: 'Order Confirmation - Stone Connect',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h1 style="color: #2563eb;">Thank you for your order!</h1>
+              <p><strong>Total:</strong> R${cartTotal.toFixed(2)}</p>
+              <p>Your retailer(s) will contact you within 24 hours to arrange delivery.</p>
+              
+              <h2>Order Details:</h2>
+              <ul>
+                ${cart.map((item: any) => `
+                  <li>
+                  <strong>Name:</strong> ${customer.firstName} ${customer.lastName}<br>
+                  <strong>Email:</strong> ${customer.email}<br>
+                  <strong>Phone:</strong> ${customer.phone}<br>
+                    <strong>${item.productType}</strong><br>
+                    Material: ${item.material}<br>
+                    Color: ${item.selectedColor}<br>
+                    Price: R${item.basePrice}<br>
+                    ${item.deceasedName ? `Name: ${item.deceasedName}<br>` : ''}
+                    ${item.customMessage ? `Message: "${item.customMessage}"<br>` : ''}
+                    Retailer: ${item.retailerName}
+                  </li>
+                `).join('')}
+              </ul>
+              
+              <h2>Delivery Address:</h2>
+              <p>${customer.address}<br>${customer.city}, ${customer.postalCode}</p>
+              
+              <p style="margin-top: 30px; color: #666;">
+                Questions? Email us at support@stoneconnect.co.za
+              </p>
+            </div>
+          `
+        })
+
         // Send retailer emails
         const retailerEmails = [...new Set(cart.map((item: any) => item.retailerEmail).filter(Boolean))] as string[]
         
