@@ -496,21 +496,15 @@ export default function RetailerSettingsPage() {
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label className="block font-semibold mb-2 text-gray-700">Bank Name</label>
-                  <select
+                  <input
+                    type="text"
                     value={retailerData.bank_name}
                     onChange={(e) => setRetailerData({...retailerData, bank_name: e.target.value})}
+                    placeholder="e.g., ABSA, FNB, Standard Bank"
                     className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
                     disabled={!isVerified}
-                  >
-                    <option value="">Select Bank</option>
-                    <option value="ABSA">ABSA</option>
-                    <option value="Standard Bank">Standard Bank</option>
-                    <option value="FNB">FNB</option>
-                    <option value="Nedbank">Nedbank</option>
-                    <option value="Capitec">Capitec</option>
-                    <option value="African Bank">African Bank</option>
-                    <option value="TymeBank">TymeBank</option>
-                  </select>
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Enter your bank name</p>
                 </div>
                 <div>
                   <label className="block font-semibold mb-2 text-gray-700">Account Type</label>
@@ -520,9 +514,11 @@ export default function RetailerSettingsPage() {
                     className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
                     disabled={!isVerified}
                   >
-                    <option value="cheque">Cheque/Current</option>
-                    <option value="savings">Savings</option>
-                    <option value="business">Business</option>
+                    <option value="">Select Account Type</option>
+                    <option value="Cheque">Cheque</option>
+                    <option value="Current">Current</option>
+                    <option value="Savings">Savings</option>
+                    <option value="Business">Business</option>
                   </select>
                 </div>
               </div>
@@ -772,7 +768,7 @@ export default function RetailerSettingsPage() {
                   Debit Order Information
                 </h3>
                 <div className="space-y-3 text-gray-700">
-                  <p><strong>Amount:</strong> R1500/month</p>
+                  <p><strong>Amount:</strong> R499/month</p>
                   <p><strong>Debit Date:</strong> 1st of each month</p>
                   <p><strong>Method:</strong> Direct debit from registered bank account</p>
                   <p className="text-sm text-gray-600 mt-4">
