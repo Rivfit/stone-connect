@@ -54,7 +54,7 @@ export default function CancelPage() {
           </div>
 
           <p className="text-sm text-gray-500 mt-8">
-            Need help? Contact us at support@stoneconnect.co.za
+            Need help? Contact us at rerglobalventures@gmail.com
           </p>
         </div>
       </div>

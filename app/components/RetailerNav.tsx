@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useRetailerAuth } from './RetailerAuthContext'
-import { LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Star } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Star, FileCheck } from 'lucide-react'
 
 export default function RetailerNav() {
   const pathname = usePathname()
@@ -19,6 +19,7 @@ export default function RetailerNav() {
     { href: '/dashboard/retailer', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/dashboard/retailer/products', icon: Package, label: 'Products' },
     { href: '/dashboard/retailer/orders', icon: ShoppingBag, label: 'Orders' },
+    { href: '/dashboard/retailer/verification', icon: FileCheck, label: 'Verification', badge: true },
     { href: '/dashboard/retailer/settings', icon: Settings, label: 'Settings' },
   ]
 
@@ -50,7 +51,7 @@ export default function RetailerNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors relative ${
                   pathname === item.href
                     ? 'bg-blue-100 text-blue-700 font-semibold'
                     : 'text-gray-600 hover:bg-gray-100'
@@ -58,6 +59,9 @@ export default function RetailerNav() {
               >
                 <item.icon size={18} />
                 {item.label}
+                {item.badge && (
+                  <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-2 h-2 animate-pulse"></span>
+                )}
               </Link>
             ))}
             <button
