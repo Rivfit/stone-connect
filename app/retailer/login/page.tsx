@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRetailerAuth } from '../../components/RetailerAuthContext'
 import Link from 'next/link'
+import Image from 'next/image'
 import { LogIn, Mail, Lock, ArrowLeft } from 'lucide-react'
 
 export default function RetailerLoginPage() {
@@ -41,9 +42,17 @@ export default function RetailerLoginPage() {
 
         {/* Login Card */}
         <div className="bg-white rounded-2xl shadow-2xl p-8">
-          {/* Header */}
+          {/* Header with Logo */}
           <div className="text-center mb-8">
-            <div className="text-5xl mb-4">🪦</div>
+            <div className="flex justify-center mb-4">
+              <Image 
+                src="/stone-black.png" 
+                alt="Stone Connect Logo" 
+                width={120} 
+                height={120}
+                className="object-contain"
+              />
+            </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Retailer Login</h1>
             <p className="text-gray-600">Access your Stone Connect dashboard</p>
           </div>

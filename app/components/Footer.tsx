@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Mail, Phone, MapPin } from 'lucide-react'
+import Image from 'next/image'
 
 export default function Footer() {
   return (
@@ -8,10 +9,17 @@ export default function Footer() {
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           {/* Company Info */}
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-3xl">🪦</span>
-              <span className="font-bold text-xl">Stone Connect</span>
-            </div>
+            <div className="flex items-center gap-3 mb-4">
+          <Image
+            src="/stone.png"
+            alt="Stone Connect Logo"
+            width={60}
+            height={60}
+           className="object-contain"
+         />
+        <span className="font-bold text-xl">Stone Connect</span>
+        </div>
+
             <p className="text-gray-400 mb-4">
               South Africa's Premier Memorial Marketplace
             </p>

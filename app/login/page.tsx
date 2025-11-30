@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Mail, Lock, User, Store, ArrowLeft } from 'lucide-react'
 
 export default function LoginPage() {
@@ -48,7 +49,16 @@ export default function LoginPage() {
         </Link>
 
         <div className="text-center mb-12">
-          <div className="text-6xl mb-4">🪦</div>
+          <div className="mb-6 flex justify-center">
+  <Image
+    src="/stone-black.png"
+    alt="Black Stone Logo"
+    width={180}
+    height={180}
+    className="object-contain"
+  />
+</div>
+
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Welcome Back</h1>
           <p className="text-xl text-gray-600">Choose your account type to continue</p>
         </div>

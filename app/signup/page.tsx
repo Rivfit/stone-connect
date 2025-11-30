@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, User, Mail, Lock, Phone, MapPin, Eye, EyeOff } from 'lucide-react'
+import Image from 'next/image'
 
 export default function CustomerSignupPage() {
   const router = useRouter()
@@ -86,7 +87,16 @@ export default function CustomerSignupPage() {
 
         <div className="bg-white rounded-2xl shadow-2xl p-8">
           <div className="text-center mb-8">
-            <div className="text-5xl mb-4">🪦</div>
+
+            {/* 🔥 Added Black Logo */}
+            <Image
+              src="/stone-black.png"
+              alt="Stone Connect Logo"
+              width={120}
+              height={120}
+              className="mx-auto mb-4"
+            />
+
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Customer Account</h1>
             <p className="text-gray-600">Join Stone Connect to track orders and save your preferences</p>
           </div>
@@ -207,7 +217,7 @@ export default function CustomerSignupPage() {
               </div>
             </div>
 
-            {/* Address (Optional) */}
+            {/* Address */}
             <div className="border-t pt-6">
               <h3 className="font-bold text-lg mb-4">Delivery Address (Optional)</h3>
               <div className="space-y-4">
@@ -254,7 +264,7 @@ export default function CustomerSignupPage() {
               </div>
             </div>
 
-            {/* Terms & Conditions */}
+            {/* Terms */}
             <div className="border-2 border-blue-200 bg-blue-50 p-4 rounded-lg">
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
@@ -278,7 +288,7 @@ export default function CustomerSignupPage() {
               </label>
             </div>
 
-            {/* Submit Button */}
+            {/* Button */}
             <button
               type="submit"
               disabled={isLoading || !agreeToTerms}

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Store, Mail, Lock, Phone, MapPin, Check, Building2, FileText, Globe } from 'lucide-react'
+import Image from 'next/image'
 
 export default function RetailerSignupPage() {
   const router = useRouter()
@@ -97,7 +98,14 @@ export default function RetailerSignupPage() {
 
         <div className="bg-white rounded-2xl shadow-2xl p-8">
           <div className="text-center mb-8">
-            <div className="text-5xl mb-4">🪦</div>
+            <Image
+           src="/stone-black.png"
+           alt="Stone Connect Logo"
+           width={120}
+           height={120}
+           className="mx-auto mb-4"
+        />
+
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Become a Verified Retailer</h1>
             <p className="text-gray-600">Join Stone Connect and reach customers across South Africa</p>
           </div>

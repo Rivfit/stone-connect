@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { useRetailerAuth } from './RetailerAuthContext'
 import { LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Star, FileCheck, Menu, X } from 'lucide-react'
@@ -37,7 +38,13 @@ export default function RetailerNav() {
           {/* Logo & Business Name */}
           <div className="flex items-center gap-2 sm:gap-4">
             <Link href="/" className="flex items-center gap-2">
-              <span className="text-2xl sm:text-3xl">🪦</span>
+              <Image 
+                src="/stone-black.png" 
+                alt="Stone Connect" 
+                width={40} 
+                height={40}
+                className="object-contain"
+              />
               <span className="font-bold text-lg sm:text-xl hidden sm:inline">Stone Connect</span>
             </Link>
             <div className="h-8 w-px bg-gray-300 hidden sm:block"></div>
