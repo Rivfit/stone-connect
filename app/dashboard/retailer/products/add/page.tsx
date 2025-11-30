@@ -20,7 +20,11 @@ export default function AddProductPage() {
     material: '',
     colors: '',
     basePrice: '',
-    description: ''
+    description: '',
+    installationIncluded: false,
+    installationOption: 'included', // 'included' | 'range' | 'contact'
+    installationPriceMin: '',
+    installationPriceMax: ''
   })
 
   useEffect(() => {
@@ -38,10 +42,20 @@ export default function AddProductPage() {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    })
+    const { name, value, type } = e.target
+    
+    if (type === 'checkbox') {
+      const checked = (e.target as HTMLInputElement).checked
+      setFormData({
+        ...formData,
+        [name]: checked
+      })
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      })
+    }
   }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -52,16 +66,16 @@ export default function AddProductPage() {
 
     try {
       const uploadPromises = Array.from(files).map(async (file) => {
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('upload_preset', 'stone_connect_unsigned')
-        formData.append('cloud_name', process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!)
+        const formDataImg = new FormData()
+        formDataImg.append('file', file)
+        formDataImg.append('upload_preset', 'stone_connect_unsigned')
+        formDataImg.append('cloud_name', process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!)
 
         const response = await fetch(
           `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
           {
             method: 'POST',
-            body: formData,
+            body: formDataImg,
           }
         )
 
@@ -93,11 +107,34 @@ export default function AddProductPage() {
       }
     }
 
+    // Validate installation pricing if range is selected
+    if (!formData.installationIncluded && formData.installationOption === 'range') {
+      if (!formData.installationPriceMin || !formData.installationPriceMax) {
+        alert('Please provide both minimum and maximum installation prices for the range option.')
+        return
+      }
+      if (parseFloat(formData.installationPriceMin) >= parseFloat(formData.installationPriceMax)) {
+        alert('Maximum installation price must be greater than minimum price.')
+        return
+      }
+    }
+
     setIsSubmitting(true)
 
     try {
-      
       const colorsArray = formData.colors.split(',').map(c => c.trim())
+
+      // Prepare installation data
+      const installationData = {
+        installation_included: formData.installationIncluded,
+        installation_option: formData.installationIncluded ? 'included' : formData.installationOption,
+        installation_price_min: !formData.installationIncluded && formData.installationOption === 'range' 
+          ? parseFloat(formData.installationPriceMin) 
+          : null,
+        installation_price_max: !formData.installationIncluded && formData.installationOption === 'range' 
+          ? parseFloat(formData.installationPriceMax) 
+          : null,
+      }
 
       const { data, error } = await supabase
         .from('products')
@@ -112,6 +149,7 @@ export default function AddProductPage() {
           reviews_count: 0,
           purchases_count: 0,
           views_count: 0,
+          ...installationData
         })
         .select()
 
@@ -269,6 +307,91 @@ export default function AddProductPage() {
                 placeholder="e.g., 8500"
               />
             </div>
+          </div>
+
+          {/* Installation Section */}
+          <div className="border-2 border-blue-200 bg-blue-50 rounded-xl p-6">
+            <h3 className="font-bold text-lg mb-4 text-gray-800">Installation Options</h3>
+            
+            <div className="mb-4">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="installationIncluded"
+                  checked={formData.installationIncluded}
+                  onChange={handleChange}
+                  className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="font-semibold text-gray-700">
+                  Installation is included in the product price
+                </span>
+              </label>
+            </div>
+
+            {!formData.installationIncluded && (
+              <div className="space-y-4 mt-4 pl-8 border-l-4 border-blue-300">
+                <div>
+                  <label className="block font-semibold mb-2 text-gray-700">
+                    Installation Pricing Option *
+                  </label>
+                  <select
+                    name="installationOption"
+                    value={formData.installationOption}
+                    onChange={handleChange}
+                    className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none bg-white"
+                  >
+                    <option value="range">Price Range</option>
+                    <option value="contact">Contact for Quote</option>
+                  </select>
+                </div>
+
+                {formData.installationOption === 'range' && (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-semibold mb-2 text-gray-700">
+                        Min Price (R) *
+                      </label>
+                      <input
+                        type="number"
+                        name="installationPriceMin"
+                        required={!formData.installationIncluded && formData.installationOption === 'range'}
+                        min="0"
+                        step="100"
+                        value={formData.installationPriceMin}
+                        onChange={handleChange}
+                        className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
+                        placeholder="e.g., 500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold mb-2 text-gray-700">
+                        Max Price (R) *
+                      </label>
+                      <input
+                        type="number"
+                        name="installationPriceMax"
+                        required={!formData.installationIncluded && formData.installationOption === 'range'}
+                        min="0"
+                        step="100"
+                        value={formData.installationPriceMax}
+                        onChange={handleChange}
+                        className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
+                        placeholder="e.g., 1500"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {formData.installationOption === 'contact' && (
+                  <div className="bg-white border border-blue-300 rounded-lg p-4">
+                    <p className="text-sm text-gray-700">
+                      ℹ️ Customers will see: <strong>"Installation available - Contact for quote"</strong>
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div>
