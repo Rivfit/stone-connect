@@ -775,7 +775,7 @@ export default function RetailerSettingsPage() {
                   className="mt-6 bg-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 transition-colors"
                   onClick={() => {
                     if (confirm('Are you sure you want to cancel your premium subscription?')) {
-                      alert('Cancellation feature coming soon. Please contact support@stoneconnect.co.za')
+                      alert('Cancellation feature coming soon. Please contact rerglobalventures@gmail.com')
                     }
                   }}
                 >

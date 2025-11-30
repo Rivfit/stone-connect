@@ -11,7 +11,11 @@ interface CartItem {
   selectedColor: string
   deceasedName: string
   customMessage: string
+  cemeteryName: string
+  plotNumber: string
+  customerNotes: string
   retailerName: string
+  retailerEmail: string
   addedAt: number
 }
 

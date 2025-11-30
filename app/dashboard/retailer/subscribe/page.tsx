@@ -106,7 +106,7 @@ export default function SubscribePage() {
               <h3 className="text-2xl font-bold">Premium Plan</h3>
               <Star className="text-yellow-700" size={32} fill="currentColor" />
             </div>
-            <div className="text-5xl font-bold mb-6">R499<span className="text-xl">/month</span></div>
+            <div className="text-5xl font-bold mb-6">R1500<span className="text-xl">/month</span></div>
             
             <ul className="space-y-4 mb-8">
               <li className="flex items-start gap-3">
@@ -182,7 +182,7 @@ export default function SubscribePage() {
           <div className="space-y-6">
             <div>
               <h3 className="font-bold text-lg mb-2">How does billing work?</h3>
-              <p className="text-gray-300">Monthly subscription of R499 is debited on the 1st of each month via debit order from your registered bank account.</p>
+              <p className="text-gray-300">Monthly subscription of R1500 is debited on the 1st of each month via debit order from your registered bank account.</p>
             </div>
 
             <div>

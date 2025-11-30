@@ -1,10 +1,8 @@
 'use client'
 
-'use client'
-
 import { useState } from 'react'
-import { X, ShoppingCart } from 'lucide-react'
 import { useCart } from './CartContext'
+import { X, ShoppingCart, AlertTriangle } from 'lucide-react'
 
 interface Product {
   id: string
@@ -26,15 +24,48 @@ interface Product {
 }
 
 interface ProductModalProps {
-  product: Product
+  product: any
   onClose: () => void
 }
 
 export default function ProductModal({ product, onClose }: ProductModalProps) {
+  const { addToCart } = useCart()
   const [selectedColor, setSelectedColor] = useState(product.colors[0])
   const [deceasedName, setDeceasedName] = useState('')
   const [customMessage, setCustomMessage] = useState('')
-  const { addToCart } = useCart()
+  const [cemeteryName, setCemeteryName] = useState('')
+  const [plotNumber, setPlotNumber] = useState('')
+  const [customerNotes, setCustomerNotes] = useState('')
+
+  const handleAddToCart = () => {
+    if (!deceasedName.trim()) {
+      alert('Please enter the name for the memorial')
+      return
+    }
+
+    if (!cemeteryName.trim()) {
+      alert('Please enter the cemetery name')
+      return
+    }
+
+    addToCart({
+      productId: product.id,
+      productType: product.type,
+      material: product.material,
+      selectedColor,
+      basePrice: product.base_price,
+      deceasedName,
+      customMessage,
+      cemeteryName,
+      plotNumber,
+      customerNotes,
+      retailerName: product.retailers?.business_name || 'Unknown',
+      retailerEmail: product.retailers?.email || ''
+    })
+
+    alert('✅ Added to cart!')
+    onClose()
+  }
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-ZA', {
@@ -43,188 +74,178 @@ export default function ProductModal({ product, onClose }: ProductModalProps) {
     }).format(price)
   }
 
-  const handleAddToCart = () => {
-    addToCart({
-      productId: product.id,
-      productType: product.type,
-      material: product.material,
-      basePrice: product.base_price,
-      selectedColor,
-      deceasedName,
-      customMessage,
-      retailerName: product.retailers?.business_name || 'Stone Connect Retailer',
-    })
-    
-    alert('✅ Added to cart successfully!')
-    onClose()
-  }
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-gray-900">Product Details</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            <X size={28} />
-          </button>
-        </div>
+    <div className="fixed inset-0 bg-black/70 flex justify-center items-start overflow-y-auto p-4 z-50">
+       <div className="bg-white rounded-2xl max-w-3xl w-full my-8 relative max-h-[90vh] overflow-y-auto">
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors z-10"
+        >
+          <X size={24} />
+        </button>
 
-        {/* Content */}
-        <div className="p-6">
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* Left: Image Gallery */}
+        <div className="p-8">
+          {/* Header */}
+          <div className="mb-6">
+            <h2 className="text-3xl font-bold mb-2">{product.type}</h2>
+            <p className="text-xl text-gray-600 mb-1">{product.material}</p>
+            <p className="text-3xl font-bold text-green-600">{formatPrice(product.base_price)}</p>
+          </div>
+
+          {/* Retailer Info */}
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+            <p className="font-semibold text-blue-900">
+              Sold by: {product.retailers?.business_name}
+            </p>
+            {product.retailers?.is_premium && (
+              <p className="text-sm text-yellow-700 flex items-center gap-1 mt-1">
+                ⭐ Premium Verified Retailer
+              </p>
+            )}
+          </div>
+
+          {/* Description */}
+          <div className="mb-6">
+            <h3 className="font-bold text-lg mb-2">Description</h3>
+            <p className="text-gray-700">{product.description}</p>
+          </div>
+
+          {/* Color Selection */}
+          <div className="mb-6">
+            <label className="block font-bold text-lg mb-3">Select Color</label>
+            <div className="flex gap-3 flex-wrap">
+              {product.colors.map((color: string) => (
+                <button
+                  key={color}
+                  onClick={() => setSelectedColor(color)}
+                  className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                    selectedColor === color
+                      ? 'bg-blue-600 text-white ring-4 ring-blue-200'
+                      : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                  }`}
+                >
+                  {color}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Customization Fields */}
+          <div className="space-y-4 mb-6">
             <div>
-              {product.images && product.images.length > 0 ? (
-                <div>
-                  <div className="bg-gray-100 rounded-xl h-96 overflow-hidden mb-4">
-                    <img
-                      src={product.images[0]}
-                      alt={product.type}
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                  {product.images.length > 1 && (
-                    <div className="grid grid-cols-4 gap-2">
-                      {product.images.slice(0, 4).map((img, idx) => (
-                        <img
-                          key={idx}
-                          src={img}
-                          alt={`${product.type} ${idx + 1}`}
-                          className="w-full h-20 object-cover rounded-lg border-2 border-gray-200 cursor-pointer hover:border-blue-500 transition-colors"
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl h-96 flex items-center justify-center mb-4">
-                  <span className="text-9xl">🪦</span>
-                </div>
-              )}
-              
-              {/* Stats */}
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <p className="text-2xl font-bold text-blue-600">{product.reviews_count}</p>
-                  <p className="text-sm text-gray-600">Reviews</p>
-                </div>
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <p className="text-2xl font-bold text-green-600">{product.purchases_count}</p>
-                  <p className="text-sm text-gray-600">Sold</p>
-                </div>
-                <div className="bg-purple-50 p-4 rounded-lg">
-                  <p className="text-2xl font-bold text-purple-600">{product.views_count}</p>
-                  <p className="text-sm text-gray-600">Views</p>
-                </div>
-              </div>
+              <label className="block font-bold text-lg mb-2">
+                Name for Memorial *
+              </label>
+              <input
+                type="text"
+                value={deceasedName}
+                onChange={(e) => setDeceasedName(e.target.value)}
+                placeholder="Full name to be engraved"
+                className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
+                required
+              />
             </div>
 
-            {/* Right: Details & Form */}
-            <div className="space-y-6">
-              {/* Product Info */}
-              <div>
-                <h3 className="text-3xl font-bold mb-2">{product.type}</h3>
-                <p className="text-xl text-gray-600 font-semibold mb-4">{product.material}</p>
-                <p className="text-gray-700 leading-relaxed">{product.description}</p>
-              </div>
+            <div>
+              <label className="block font-bold text-lg mb-2">
+                Custom Message (Optional)
+              </label>
+              <textarea
+                value={customMessage}
+                onChange={(e) => setCustomMessage(e.target.value)}
+                placeholder="e.g., Forever in our hearts, Beloved mother and wife"
+                className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none h-24"
+                maxLength={200}
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                {customMessage.length}/200 characters
+              </p>
+            </div>
+          </div>
 
-              {/* Retailer Info */}
-              {product.retailers && (
-                <div className="bg-gray-50 p-4 rounded-xl">
-                  <p className="font-semibold text-lg mb-1">
-                    {product.retailers.business_name}
-                  </p>
-                  <p className="text-sm text-gray-600">{product.retailers.address}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-yellow-500">⭐</span>
-                    <span className="font-semibold">{product.retailers.rating}</span>
-                    <span className="text-gray-500 text-sm">rating</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Color Selection */}
+          {/* Cemetery Information */}
+          <div className="border-t-2 pt-6 mb-6">
+            <h3 className="font-bold text-xl mb-4">Cemetery Information</h3>
+            
+            <div className="space-y-4">
               <div>
-                <label className="block font-bold text-lg mb-3 text-gray-900">
-                  Select Color
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {product.colors.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => setSelectedColor(color)}
-                      className={`p-4 rounded-lg font-semibold transition-all ${
-                        selectedColor === color
-                          ? 'bg-blue-600 text-white shadow-lg scale-105'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {color}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Name of Deceased */}
-              <div>
-                <label className="block font-bold text-lg mb-2 text-gray-900">
-                  Name of Deceased (Optional)
+                <label className="block font-bold mb-2">
+                  Cemetery Name *
                 </label>
                 <input
                   type="text"
-                  value={deceasedName}
-                  onChange={(e) => setDeceasedName(e.target.value)}
-                  placeholder="Enter full name"
-                  className="w-full border-2 border-gray-300 p-3 rounded-lg focus:border-blue-500 outline-none text-lg"
-                  maxLength={100}
+                  value={cemeteryName}
+                  onChange={(e) => setCemeteryName(e.target.value)}
+                  placeholder="e.g., Rebecca Street Cemetery, Pretoria"
+                  className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
+                  required
                 />
               </div>
 
-              {/* Custom Message */}
               <div>
-                <label className="block font-bold text-lg mb-2 text-gray-900">
-                  Custom Message (Optional)
+                <label className="block font-bold mb-2">
+                  Plot Number (if applicable)
                 </label>
-                <textarea
-                  value={customMessage}
-                  onChange={(e) => setCustomMessage(e.target.value)}
-                  placeholder="Forever in our hearts..."
-                  className="w-full border-2 border-gray-300 p-3 rounded-lg focus:border-blue-500 outline-none text-lg resize-none"
-                  rows={4}
-                  maxLength={200}
+                <input
+                  type="text"
+                  value={plotNumber}
+                  onChange={(e) => setPlotNumber(e.target.value)}
+                  placeholder="e.g., Section A, Row 12, Plot 45"
+                  className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
                 />
                 <p className="text-sm text-gray-500 mt-1">
-                  {customMessage.length}/200 characters
-                </p>
-              </div>
-
-              {/* Price & Add to Cart */}
-              <div className="border-t-2 pt-6">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-xl font-semibold text-gray-700">Total Price:</span>
-                  <span className="text-4xl font-bold text-green-600">
-                    {formatPrice(product.base_price)}
-                  </span>
-                </div>
-
-                <button
-                  onClick={handleAddToCart}
-                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 rounded-xl text-xl font-bold hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg flex items-center justify-center gap-3"
-                >
-                  <ShoppingCart size={24} />
-                  Add to Cart
-                </button>
-
-                <p className="text-center text-sm text-gray-500 mt-3">
-                  Free consultation • Secure payment • Expert craftsmanship
+                  Leave blank if not applicable or unknown
                 </p>
               </div>
             </div>
+
+            {/* Cemetery Disclaimer */}
+            <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4 mt-4">
+              <div className="flex gap-3">
+                <AlertTriangle className="text-yellow-600 flex-shrink-0 mt-1" size={24} />
+                <div className="text-sm text-gray-800">
+                  <p className="font-bold text-yellow-800 mb-2">⚠️ Important Cemetery Notice</p>
+                  <ul className="space-y-1">
+                    <li>• Retailer will confirm cemetery compliance before manufacturing and/or installation</li>
+                    <li>• Cemetery requirements differ by municipality</li>
+                    <li>• Retailers may adjust installation price or require additional documents</li>
+                    <li>• Some cemeteries have specific size, material, or design restrictions</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
+
+          {/* Customer Notes */}
+          <div className="border-t-2 pt-6 mb-6">
+            <label className="block font-bold text-lg mb-2">
+              Additional Notes (Optional)
+            </label>
+            <textarea
+              value={customerNotes}
+              onChange={(e) => setCustomerNotes(e.target.value)}
+              placeholder="Any special requests or additional information for the retailer..."
+              className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none h-32"
+              maxLength={500}
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              {customerNotes.length}/500 characters - Examples: preferred installation date, access restrictions, special design requests
+            </p>
+          </div>
+
+          {/* Add to Cart Button */}
+          <button
+            onClick={handleAddToCart}
+            className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-4 rounded-xl text-xl font-bold hover:from-green-700 hover:to-green-800 transition-all shadow-lg flex items-center justify-center gap-2"
+          >
+            <ShoppingCart size={24} />
+            Add to Cart - {formatPrice(product.base_price)}
+          </button>
+
+          <p className="text-center text-sm text-gray-500 mt-4">
+            Final price may vary based on customization and cemetery requirements
+          </p>
         </div>
       </div>
     </div>
