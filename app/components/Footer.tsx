@@ -90,6 +90,11 @@ export default function Footer() {
                   Seller Agreement
                 </Link>
               </li>
+              <li>
+                <Link href="/legal/acceptable-use" className="hover:text-white transition-colors">
+                  Acceptable Use Policy
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -122,6 +127,11 @@ export default function Footer() {
                   Disclaimer Notice
                 </Link>
               </li>
+              <li>
+                <Link href="/legal/acceptable-use" className="hover:text-white transition-colors">
+                  Acceptable Use Policy
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
@@ -137,6 +147,9 @@ export default function Footer() {
             </Link>
             <Link href="/legal/privacy" className="hover:text-white transition-colors">
               Privacy
+            </Link>
+            <Link href="/legal/acceptable-use" className="hover:text-white transition-colors">
+              Acceptable Use
             </Link>
             <Link href="/legal/disclaimer" className="hover:text-white transition-colors">
               Disclaimer
