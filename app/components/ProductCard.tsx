@@ -1,6 +1,7 @@
 'use client'
 
-import { Star, TrendingUp, Eye, MapPin } from 'lucide-react'
+import { Star, TrendingUp, Eye, MapPin, Scale, Check } from 'lucide-react'
+import { useCompare } from './CompareContext'
 
 interface Product {
   id: string
@@ -29,11 +30,22 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, onViewDetails }: ProductCardProps) {
+  const { addToCompare, removeFromCompare, isInCompare } = useCompare()
+  const inCompare = isInCompare(product.id)
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-ZA', {
       style: 'currency',
       currency: 'ZAR',
     }).format(price)
+  }
+
+  const handleCompareClick = () => {
+    if (inCompare) {
+      removeFromCompare(product.id)
+    } else {
+      addToCompare(product.id)
+    }
   }
 
   return (
@@ -58,6 +70,14 @@ export default function ProductCard({ product, onViewDetails }: ProductCardProps
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <span className="text-7xl">🪦</span>
+          </div>
+        )}
+        
+        {/* Compare Badge on Image */}
+        {inCompare && (
+          <div className="absolute top-3 right-3 bg-green-600 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
+            <Check size={14} strokeWidth={3} />
+            In Compare
           </div>
         )}
       </div>
@@ -99,13 +119,29 @@ export default function ProductCard({ product, onViewDetails }: ProductCardProps
           </div>
         </div>
 
-        {/* View Details Button */}
-        <button 
-          onClick={() => onViewDetails(product)}
-          className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 text-lg"
-        >
-          <span>View Details</span>
-        </button>
+        {/* Action Buttons */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* View Details Button */}
+          <button 
+            onClick={() => onViewDetails(product)}
+            className="bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+          >
+            <span>View Details</span>
+          </button>
+
+          {/* Compare Button */}
+          <button
+            onClick={handleCompareClick}
+            className={`py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+              inCompare
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-white text-gray-700 border-2 border-gray-300 hover:border-purple-600 hover:text-purple-600 hover:bg-purple-50'
+            }`}
+          >
+            <Scale size={18} />
+            <span>{inCompare ? 'Added' : 'Compare'}</span>
+          </button>
+        </div>
       </div>
     </div>
   )

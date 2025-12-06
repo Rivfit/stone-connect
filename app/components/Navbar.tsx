@@ -1,12 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { ShoppingCart, User, Star, Menu, X } from 'lucide-react'
+import { ShoppingCart, User, Star, Menu, X, Scale } from 'lucide-react'
 import { useCart } from './CartContext'
+import { useCompare } from './CompareContext'
 import { useState } from 'react'
 
 export default function Navbar() {
   const { cartCount } = useCart()
+  const { compareList } = useCompare()
   const [showMobileMenu, setShowMobileMenu] = useState(false)
 
   return (
@@ -42,6 +44,17 @@ export default function Navbar() {
             </Link>
             <Link href="/retailer/signup" className="hover:text-blue-400 transition-colors">
               Sell on Stone Connect
+            </Link>
+            
+            {/* Compare Link */}
+            <Link href="/compare" className="relative hover:text-purple-400 transition-colors flex items-center gap-2">
+              <Scale size={20} />
+              <span>Compare</span>
+              {compareList.length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-purple-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold animate-pulse">
+                  {compareList.length}
+                </span>
+              )}
             </Link>
             
             <Link href="/cart" className="relative hover:text-blue-400 transition-colors">
@@ -100,6 +113,22 @@ export default function Navbar() {
             >
               Sell on Stone Connect
             </Link>
+            
+            {/* Compare Link Mobile */}
+            <Link 
+              href="/compare" 
+              onClick={() => setShowMobileMenu(false)}
+              className="block hover:text-purple-400 transition-colors py-2 flex items-center gap-2"
+            >
+              <Scale size={20} />
+              Compare Products
+              {compareList.length > 0 && (
+                <span className="bg-purple-500 text-white text-xs px-2 py-1 rounded-full font-bold">
+                  {compareList.length}
+                </span>
+              )}
+            </Link>
+            
             <Link 
               href="/cart" 
               onClick={() => setShowMobileMenu(false)}
