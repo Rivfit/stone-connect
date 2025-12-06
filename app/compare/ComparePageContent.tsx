@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
-import { X, Star, MapPin, ArrowRight, Plus, Package, Palette } from 'lucide-react'
+import { useCart } from '../components/CartContext'
+import { X, Star, MapPin, ArrowRight, Plus, Package, Palette, ShoppingCart } from 'lucide-react'
 
 interface Product {
   id: string
@@ -28,6 +29,7 @@ interface Product {
 
 export default function ComparePageContent() {
   const searchParams = useSearchParams()
+  const { addToCart } = useCart()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [compareIds, setCompareIds] = useState<string[]>([])
@@ -84,6 +86,27 @@ export default function ComparePageContent() {
       style: 'currency',
       currency: 'ZAR',
     }).format(price)
+  }
+
+  const handleBuyNow = (product: Product) => {
+    // Add to cart with required fields
+    addToCart({
+      productId: product.id,
+      productType: product.type,
+      material: product.material,
+      basePrice: product.base_price,
+      selectedColor: product.colors?.[0] || 'Standard',
+      deceasedName: '', // User will fill this in cart/checkout
+      customMessage: '',
+      cemeteryName: '',
+      plotNumber: '',
+      customerNotes: '',
+      retailerName: product.retailers?.business_name || 'Unknown Retailer',
+      retailerEmail: product.retailers?.email || '',
+    })
+    
+    // Redirect to cart/checkout
+    window.location.href = '/cart'
   }
 
   if (loading) {
@@ -307,12 +330,13 @@ export default function ComparePageContent() {
                         View Details
                         <ArrowRight size={18} />
                       </a>
-                      <a
-                        href={`/products/${product.id}?action=buy`}
+                      <button
+                        onClick={() => handleBuyNow(product)}
                         className="inline-flex items-center justify-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors"
                       >
+                        <ShoppingCart size={18} />
                         Buy Now
-                      </a>
+                      </button>
                     </div>
                   </td>
                 ))}
