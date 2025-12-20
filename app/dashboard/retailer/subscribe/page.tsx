@@ -2,49 +2,128 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useRetailerAuth } from '../../../components/RetailerAuthContext'
-import RetailerNav from '../../../components/RetailerNav'
+import { useRetailerAuth } from '@/app/components/RetailerAuthContext'
+import RetailerNav from '@/app/components/RetailerNav'
+import { supabase } from '@/lib/supabase/client'
 import { Check, Star, TrendingUp, Award, Zap } from 'lucide-react'
 
 export default function SubscribePage() {
   const router = useRouter()
   const { retailer, isLoading } = useRetailerAuth()
   const [loading, setLoading] = useState(false)
+  const [processingPayment, setProcessingPayment] = useState(false)
+  const [currentSubscription, setCurrentSubscription] = useState<any>(null)
 
   useEffect(() => {
     if (!isLoading && !retailer) {
       router.push('/retailer/login')
+    } else if (retailer) {
+      checkSubscription()
     }
   }, [retailer, isLoading, router])
 
-  const handleSubscribe = async () => {
+  const checkSubscription = async () => {
+    if (!retailer) return
+
+    try {
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('retailer_id', retailer.id)
+        .eq('status', 'active')
+        .single()
+
+      if (data) {
+        setCurrentSubscription(data)
+      }
+    } catch (error) {
+      // No active subscription
+      console.log('No active subscription found')
+    }
+  }
+
+  const handleSubscribe = async (plan: 'monthly' | 'annual' = 'monthly') => {
+    if (!retailer) return
+    
     setLoading(true)
+    setProcessingPayment(true)
     
     try {
-      // Create PayFast subscription
-      const response = await fetch('/api/subscription/create', {
+      // Calculate price
+      const amount = plan === 'monthly' ? 1500 : 15000 // Annual = 10 months price
+      
+      // Create subscription record
+      const subscriptionData = {
+        retailer_id: retailer.id,
+        retailer_email: retailer.email,
+        retailer_name: retailer.business_name,
+        plan_type: plan,
+        plan_price: amount,
+        status: 'pending',
+        start_date: new Date().toISOString(),
+        next_billing_date: new Date(Date.now() + (plan === 'monthly' ? 30 : 365) * 24 * 60 * 60 * 1000).toISOString(),
+        auto_renew: true
+      }
+
+      const { data: subscription, error: subError } = await supabase
+        .from('subscriptions')
+        .insert([subscriptionData])
+        .select()
+        .single()
+
+      if (subError) {
+        console.error('Subscription creation error:', subError)
+        throw subError
+      }
+
+      // Send notification to admin
+      await fetch('/api/subscription/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          retailer_id: retailer?.id,
-          email: retailer?.email,
-          amount: 1500
+          subscription,
+          retailer
         })
       })
 
-      const data = await response.json()
+      // Create PayFast payment
+      const response = await fetch('/api/subscription/payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscriptionId: subscription.id,
+          retailer,
+          plan,
+          amount
+        })
+      })
+
+      const paymentData = await response.json()
       
-      if (data.payfastUrl) {
-        // Redirect to PayFast for payment
-        window.location.href = data.payfastUrl
+      if (paymentData.payfastUrl && paymentData.payfastData) {
+        // Create and submit form to PayFast
+        const form = document.createElement('form')
+        form.method = 'POST'
+        form.action = paymentData.payfastUrl
+
+        Object.entries(paymentData.payfastData).forEach(([key, value]) => {
+          const input = document.createElement('input')
+          input.type = 'hidden'
+          input.name = key
+          input.value = value as string
+          form.appendChild(input)
+        })
+
+        document.body.appendChild(form)
+        form.submit()
       } else {
-        alert('Error setting up subscription')
-        setLoading(false)
+        throw new Error('Failed to generate payment URL')
       }
     } catch (error) {
       console.error('Subscription error:', error)
-      alert('Failed to process subscription')
+      alert('Failed to process subscription. Please try again.')
       setLoading(false)
+      setProcessingPayment(false)
     }
   }
 
@@ -52,6 +131,18 @@ export default function SubscribePage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (processingPayment) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
+        <div className="text-center text-white">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white mx-auto mb-4"></div>
+          <h2 className="text-2xl font-bold mb-2">Processing Subscription...</h2>
+          <p className="text-gray-300">Redirecting to payment gateway</p>
+        </div>
       </div>
     )
   }
@@ -69,6 +160,22 @@ export default function SubscribePage() {
             Get featured, grow faster, earn more
           </p>
         </div>
+
+        {/* Current Subscription Alert */}
+        {currentSubscription && (
+          <div className="bg-green-500/20 border-2 border-green-500 rounded-xl p-6 mb-8 text-white">
+            <div className="flex items-center gap-3">
+              <Check className="text-green-400" size={32} />
+              <div>
+                <h3 className="text-xl font-bold">Active Premium Subscription</h3>
+                <p className="text-gray-300">
+                  Plan: {currentSubscription.plan_type} • 
+                  Next billing: {new Date(currentSubscription.next_billing_date).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid md:grid-cols-2 gap-8 mb-12">
           {/* Free Plan */}
@@ -96,7 +203,7 @@ export default function SubscribePage() {
             </ul>
 
             <div className="text-center text-gray-300">
-              Your current plan
+              {!currentSubscription && 'Your current plan'}
             </div>
           </div>
 
@@ -106,7 +213,7 @@ export default function SubscribePage() {
               <h3 className="text-2xl font-bold">Premium Plan</h3>
               <Star className="text-yellow-700" size={32} fill="currentColor" />
             </div>
-            <div className="text-5xl font-bold mb-6">R1500<span className="text-xl">/month</span></div>
+            <div className="text-5xl font-bold mb-6">R1,500<span className="text-xl">/month</span></div>
             
             <ul className="space-y-4 mb-8">
               <li className="flex items-start gap-3">
@@ -140,11 +247,11 @@ export default function SubscribePage() {
             </ul>
 
             <button
-              onClick={handleSubscribe}
-              disabled={loading}
-              className="w-full bg-gray-900 text-white py-4 rounded-xl text-xl font-bold hover:bg-gray-800 transition-all shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
+              onClick={() => handleSubscribe('monthly')}
+              disabled={loading || !!currentSubscription}
+              className="w-full bg-gray-900 text-white py-4 rounded-xl text-xl font-bold hover:bg-gray-800 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {loading ? 'Processing...' : 'Subscribe Now'}
+              {currentSubscription ? 'Already Subscribed' : loading ? 'Processing...' : 'Subscribe Now'}
               <Zap size={24} />
             </button>
 
@@ -182,12 +289,12 @@ export default function SubscribePage() {
           <div className="space-y-6">
             <div>
               <h3 className="font-bold text-lg mb-2">How does billing work?</h3>
-              <p className="text-gray-300">Monthly subscription of R1500 is debited on the 1st of each month via debit order from your registered bank account.</p>
+              <p className="text-gray-300">Monthly subscription of R1,500 is automatically renewed via PayFast recurring billing.</p>
             </div>
 
             <div>
               <h3 className="font-bold text-lg mb-2">Can I cancel anytime?</h3>
-              <p className="text-gray-300">Yes! Cancel anytime from your settings page. No contracts, no penalties.</p>
+              <p className="text-gray-300">Yes! Cancel anytime from your dashboard. No contracts, no penalties.</p>
             </div>
 
             <div>
@@ -197,7 +304,12 @@ export default function SubscribePage() {
 
             <div>
               <h3 className="font-bold text-lg mb-2">How much can I save with 8% commission?</h3>
-              <p className="text-gray-300">If you make R25,000 in sales monthly, you save R500/month on commission fees - more than the subscription cost!</p>
+              <p className="text-gray-300">If you make R25,000 in sales monthly, you save R500/month on commission fees - more than pays for itself!</p>
+            </div>
+
+            <div>
+              <h3 className="font-bold text-lg mb-2">Is auto-renewal automatic?</h3>
+              <p className="text-gray-300">Yes! PayFast handles automatic monthly renewals. You'll be notified before each billing cycle.</p>
             </div>
           </div>
         </div>

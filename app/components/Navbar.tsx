@@ -47,7 +47,7 @@ export default function Navbar() {
             </Link>
             
             {/* Compare Link */}
-            <Link href="/compare" className="relative hover:text-purple-400 transition-colors flex items-center gap-2">
+            <Link href="/compare" className="relative hover:text-blue-400 transition-colors flex items-center gap-2">
               <Scale size={20} />
               <span>Compare</span>
               {compareList.length > 0 && (
@@ -113,12 +113,10 @@ export default function Navbar() {
             >
               Sell on Stone Connect
             </Link>
-            
-            {/* Compare Link Mobile */}
             <Link 
               href="/compare" 
               onClick={() => setShowMobileMenu(false)}
-              className="block hover:text-purple-400 transition-colors py-2 flex items-center gap-2"
+              className="block hover:text-blue-400 transition-colors py-2 flex items-center gap-2"
             >
               <Scale size={20} />
               Compare Products
@@ -128,7 +126,6 @@ export default function Navbar() {
                 </span>
               )}
             </Link>
-            
             <Link 
               href="/cart" 
               onClick={() => setShowMobileMenu(false)}

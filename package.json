@@ -15,7 +15,7 @@
     "cloudinary": "^2.8.0",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.553.0",
-    "next": "^16.0.7",
+    "next": "^15.4.8",
     "node-fetch": "^3.3.2",
     "nodemailer": "^7.0.10",
     "query-string": "^9.3.1",
