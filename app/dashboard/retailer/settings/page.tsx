@@ -82,37 +82,63 @@ export default function RetailerSettingsPage() {
   }, [retailer])
 
   const fetchRetailerData = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('retailers')
-        .select('*')
-        .eq('id', retailer?.id)
-        .single()
-
-      if (error) throw error
-      
-      setRetailerData({
-        business_name: data.business_name || '',
-        email: data.email || '',
-        phone: data.phone || '',
-        address: data.address || '',
-        city: data.city || '',
-        postal_code: data.postal_code || '',
-        province: data.province || '',
-        bank_name: data.bank_name || '',
-        account_holder: data.account_holder || '',
-        account_number: data.account_number || '',
-        branch_code: data.branch_code || '',
-        account_type: data.account_type || 'cheque',
-        subscription_status: data.subscription_status || 'free',
-        is_premium: data.is_premium || false
-      })
-    } catch (error) {
-      console.error('Error fetching retailer data:', error)
-    } finally {
-      setLoading(false)
-    }
+  if (!retailer || !retailer.id) {
+    console.error('No retailer ID available')
+    setLoading(false)
+    return
   }
+
+  try {
+    const { data, error } = await supabase
+      .from('retailers')
+      .select('*')
+      .eq('id', retailer.id)
+      .single()
+
+    if (error) {
+      console.error('Supabase error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      })
+      throw error
+    }
+    
+    if (!data) {
+      console.error('No retailer data found')
+      setLoading(false)
+      return
+    }
+    
+    setRetailerData({
+      business_name: data.business_name || '',
+      email: data.email || '',
+      phone: data.phone || '',
+      address: data.address || '',
+      city: data.city || '',
+      postal_code: data.postal_code || '',
+      province: data.province || '',
+      bank_name: data.bank_name || '',
+      account_holder: data.account_holder || '',
+      account_number: data.account_number || '',
+      branch_code: data.branch_code || '',
+      account_type: data.account_type || 'cheque',
+      subscription_status: data.subscription_status || 'free',
+      is_premium: data.is_premium || false
+    })
+  } catch (error: any) {
+    console.error('Error fetching retailer data:', {
+      message: error?.message,
+      details: error?.details,
+      hint: error?.hint,
+      code: error?.code,
+      fullError: error
+    })
+  } finally {
+    setLoading(false)
+  }
+}
 
   const handleVerifyPassword = async () => {
     // Since we're using demo auth with localStorage, we'll verify differently

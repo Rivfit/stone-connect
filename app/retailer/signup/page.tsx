@@ -2,319 +2,336 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { ArrowLeft, Store, Mail, Lock, Phone, MapPin, Check, Building2, FileText, Globe } from 'lucide-react'
-import Image from 'next/image'
+import { Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle, Store, Building2, Phone, MapPin } from 'lucide-react'
 
 export default function RetailerSignupPage() {
   const router = useRouter()
+  
+  const [step, setStep] = useState(1) // 1 = Account, 2 = Business Details
   const [formData, setFormData] = useState({
-    businessName: '',
-    businessType: '',
-    registrationNumber: '',
     email: '',
     password: '',
     confirmPassword: '',
+    business_name: '',
     phone: '',
-    country: 'South Africa',
     address: '',
     city: '',
     province: '',
-    postalCode: '',
-    isPremium: false
+    postal_code: ''
   })
-  const [agreeToAgreement, setAgreeToAgreement] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target
-    const checked = (e.target as HTMLInputElement).checked
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }))
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleStep1Submit = (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
 
-    if (!agreeToAgreement) {
-      alert('Please agree to the Seller Agreement to continue')
+    // Validation
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters long')
       return
     }
 
     if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match')
+      setError('Passwords do not match')
       return
     }
 
-    if (formData.password.length < 8) {
-      alert('Password must be at least 8 characters')
-      return
-    }
+    setStep(2)
+  }
 
-    if (!formData.businessType) {
-      alert('Please select a business type')
-      return
-    }
-
-    setIsLoading(true)
+  const handleFinalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
 
     try {
-      const response = await fetch('/api/retailer/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          agreedToAgreement: true,
-          agreedAt: new Date().toISOString(),
-          verificationStatus: 'pending' // Documents need to be uploaded
-        })
+      // 1. Create Supabase auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
       })
 
-      const data = await response.json()
-
-      if (data.success) {
-        alert(`✅ Account Created!\n\nBusiness: ${formData.businessName}\n\n⚠️ IMPORTANT: Please login and upload your verification documents to activate your account.\n\nRequired documents:\n- Owner's ID\n- Business registration certificate\n\nA confirmation email has been sent to ${formData.email}`)
-        router.push('/retailer/login')
-      } else {
-        alert('Error creating account: ' + (data.error || 'Unknown error'))
+      if (authError) {
+        throw new Error(authError.message)
       }
-    } catch (error) {
-      console.error('Signup error:', error)
-      alert('Something went wrong. Please try again.')
+
+      if (!authData.user) {
+        throw new Error('Failed to create user account')
+      }
+
+      // 2. Create retailer record
+      const { error: retailerError } = await supabase
+        .from('retailers')
+        .insert([{
+          id: authData.user.id, // Use Supabase auth user ID
+          email: formData.email,
+          business_name: formData.business_name,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          province: formData.province,
+          postal_code: formData.postal_code,
+          is_premium: false,
+          rating: 0,
+          total_sales: 0,
+          total_views: 0,
+          reviews_count: 0,
+          created_at: new Date().toISOString()
+        }])
+
+      if (retailerError) {
+        console.error('Retailer creation error:', retailerError)
+        throw new Error('Failed to create retailer profile')
+      }
+
+      // 3. Send welcome email (optional)
+      try {
+        await fetch('/api/retailer/welcome-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: formData.email,
+            business_name: formData.business_name
+          })
+        })
+      } catch (emailError) {
+        console.log('Welcome email failed (non-critical):', emailError)
+      }
+
+      // Success! Redirect to login or dashboard
+      router.push('/retailer/login?registered=true')
+      
+    } catch (err: any) {
+      console.error('Signup error:', err)
+      setError(err.message || 'Failed to create account. Please try again.')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-green-50 py-12 px-6">
-      <div className="max-w-4xl mx-auto">
-        <Link href="/" className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-6">
-          <ArrowLeft size={20} />
-          Back to Home
-        </Link>
-
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <div className="text-center mb-8">
-            <Image
-           src="/stone-black.png"
-           alt="Stone Connect Logo"
-           width={120}
-           height={120}
-           className="mx-auto mb-4"
-        />
-
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Become a Verified Retailer</h1>
-            <p className="text-gray-600">Join Stone Connect and reach customers across South Africa</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-gray-900 to-purple-900 flex items-center justify-center px-6 py-12">
+      <div className="max-w-2xl w-full">
+        {/* Logo/Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
+            <Store size={32} className="text-white" />
           </div>
+          <h1 className="text-4xl font-bold text-white mb-2">Join Stone Connect</h1>
+          <p className="text-gray-300">Start selling memorial products online</p>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Business Information */}
-            <div className="border-b pb-6">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <Building2 size={24} className="text-blue-600" />
-                Business Information
-              </h2>
-              
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block font-semibold mb-2 flex items-center gap-2">
-                    <Store size={18} />
-                    Business Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="businessName"
-                    required
-                    value={formData.businessName}
-                    onChange={handleChange}
-                    className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
-                    placeholder="Memorial Stones SA"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold mb-2 flex items-center gap-2">
-                    <Building2 size={18} />
-                    Business Type *
-                  </label>
-                  <select
-                    name="businessType"
-                    required
-                    value={formData.businessType}
-                    onChange={handleChange}
-                    className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
-                  >
-                    <option value="">Select Business Type</option>
-                    <option value="Company">Company (Pty Ltd / Ltd)</option>
-                    <option value="Sole Proprietor">Sole Proprietor</option>
-                    <option value="Partnership">Partnership</option>
-                    <option value="Close Corporation">Close Corporation (CC)</option>
-                    <option value="Trust">Trust</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <label className="block font-semibold mb-2 flex items-center gap-2">
-                  <FileText size={18} />
-                  Registration Number
-                </label>
-                <input
-                  type="text"
-                  name="registrationNumber"
-                  value={formData.registrationNumber}
-                  onChange={handleChange}
-                  className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
-                  placeholder="e.g., 2021/123456/07"
-                />
-                <p className="text-xs text-gray-500 mt-1">Company/CC registration number (if applicable)</p>
-              </div>
+        {/* Progress Steps */}
+        <div className="flex items-center justify-center gap-4 mb-8">
+          <div className={`flex items-center gap-2 ${step >= 1 ? 'text-white' : 'text-gray-500'}`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+              step >= 1 ? 'bg-blue-600' : 'bg-gray-600'
+            }`}>
+              1
             </div>
+            <span className="hidden sm:inline">Account</span>
+          </div>
+          <div className={`w-12 h-1 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-600'}`}></div>
+          <div className={`flex items-center gap-2 ${step >= 2 ? 'text-white' : 'text-gray-500'}`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+              step >= 2 ? 'bg-blue-600' : 'bg-gray-600'
+            }`}>
+              2
+            </div>
+            <span className="hidden sm:inline">Business</span>
+          </div>
+        </div>
 
-            {/* Contact Information */}
-            <div className="border-b pb-6">
-              <h2 className="text-xl font-bold mb-4">Contact Information</h2>
-              
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block font-semibold mb-2 flex items-center gap-2">
-                    <Mail size={18} />
-                    Email Address *
-                  </label>
+        {/* Signup Form */}
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          {error && (
+            <div className="mb-6 bg-red-50 border-2 border-red-200 rounded-lg p-4 flex items-start gap-3">
+              <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />
+              <p className="text-red-800 text-sm">{error}</p>
+            </div>
+          )}
+
+          {/* Step 1: Account Details */}
+          {step === 1 && (
+            <form onSubmit={handleStep1Submit} className="space-y-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Create Your Account</h2>
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Email Address *
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                   <input
                     type="email"
-                    name="email"
                     required
                     value={formData.email}
-                    onChange={handleChange}
-                    className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
-                    placeholder="business@retailer.com"
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
+                    placeholder="your@business.com"
                   />
                 </div>
+              </div>
 
-                <div>
-                  <label className="block font-semibold mb-2 flex items-center gap-2">
-                    <Phone size={18} />
-                    Phone Number *
-                  </label>
+              {/* Password */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Password *
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full pl-10 pr-12 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
+                    placeholder="At least 8 characters"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm Password */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Confirm Password *
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    required
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    className="w-full pl-10 pr-12 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
+                    placeholder="Re-enter password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-blue-700 transition-colors"
+              >
+                Continue to Business Details →
+              </button>
+            </form>
+          )}
+
+          {/* Step 2: Business Details */}
+          {step === 2 && (
+            <form onSubmit={handleFinalSubmit} className="space-y-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Business Information</h2>
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                >
+                  ← Back
+                </button>
+              </div>
+
+              {/* Business Name */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Business Name *
+                </label>
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                  <input
+                    type="text"
+                    required
+                    value={formData.business_name}
+                    onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
+                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
+                    placeholder="Your Business Name"
+                  />
+                </div>
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Phone Number *
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                   <input
                     type="tel"
-                    name="phone"
                     required
                     value={formData.phone}
-                    onChange={handleChange}
-                    className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
                     placeholder="+27 12 345 6789"
                   />
                 </div>
               </div>
-            </div>
 
-            {/* Security */}
-            <div className="border-b pb-6">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <Lock size={24} className="text-green-600" />
-                Account Security
-              </h2>
-              
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block font-semibold mb-2">Password *</label>
-                  <input
-                    type="password"
-                    name="password"
-                    required
-                    value={formData.password}
-                    onChange={handleChange}
-                    className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
-                    placeholder="••••••••"
-                    minLength={8}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">At least 8 characters</p>
-                </div>
-
-                <div>
-                  <label className="block font-semibold mb-2">Confirm Password *</label>
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    required
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
-                    placeholder="••••••••"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Business Location */}
-            <div className="border-b pb-6">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <MapPin size={24} className="text-red-600" />
-                Business Location
-              </h2>
-
-              <div className="mb-6">
-                <label className="block font-semibold mb-2 flex items-center gap-2">
-                  <Globe size={18} />
-                  Country *
+              {/* Address */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Street Address *
                 </label>
-                <select
-                  name="country"
-                  required
-                  value={formData.country}
-                  onChange={handleChange}
-                  className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
-                >
-                  <option value="South Africa">South Africa</option>
-                  <option value="Namibia">Namibia</option>
-                  <option value="Botswana">Botswana</option>
-                  <option value="Zimbabwe">Zimbabwe</option>
-                  <option value="Mozambique">Mozambique</option>
-                  <option value="Lesotho">Lesotho</option>
-                  <option value="Eswatini">Eswatini</option>
-                </select>
-              </div>
-              
-              <div className="mb-6">
-                <label className="block font-semibold mb-2">Street Address *</label>
-                <input
-                  type="text"
-                  name="address"
-                  required
-                  value={formData.address}
-                  onChange={handleChange}
-                  className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
-                  placeholder="123 Main Street"
-                />
-              </div>
-
-              <div className="grid md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block font-semibold mb-2">City *</label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                   <input
                     type="text"
-                    name="city"
+                    required
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
+                    placeholder="123 Main Street"
+                  />
+                </div>
+              </div>
+
+              {/* City & Province */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    City *
+                  </label>
+                  <input
+                    type="text"
                     required
                     value={formData.city}
-                    onChange={handleChange}
-                    className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
                     placeholder="Pretoria"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold mb-2">Province/State *</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Province *
+                  </label>
                   <select
-                    name="province"
                     required
                     value={formData.province}
-                    onChange={handleChange}
-                    className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
+                    onChange={(e) => setFormData({ ...formData, province: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
                   >
                     <option value="">Select Province</option>
                     <option value="Gauteng">Gauteng</option>
@@ -328,148 +345,59 @@ export default function RetailerSignupPage() {
                     <option value="Northern Cape">Northern Cape</option>
                   </select>
                 </div>
-
-                <div>
-                  <label className="block font-semibold mb-2">Postal Code *</label>
-                  <input
-                    type="text"
-                    name="postalCode"
-                    required
-                    value={formData.postalCode}
-                    onChange={handleChange}
-                    className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
-                    placeholder="0001"
-                  />
-                </div>
               </div>
-            </div>
 
-            {/* Verification Notice */}
-            <div className="bg-yellow-50 border-2 border-yellow-300 p-6 rounded-xl">
-              <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-                <FileText className="text-yellow-600" size={24} />
-                📄 Document Verification Required
-              </h3>
-              <p className="text-gray-700 mb-3">
-                After registration, you must upload the following documents to verify your account:
-              </p>
-              <ul className="space-y-2 text-gray-700">
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-600 font-bold">1.</span>
-                  <span><strong>Owner's ID Document</strong> (South African ID, Passport, or Driver's License)</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-600 font-bold">2.</span>
-                  <span><strong>Business Registration Certificate</strong> (CIPC certificate, CK1 form, or proof of incorporation)</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-yellow-600 font-bold">3.</span>
-                  <span><strong>Proof of Address</strong> (Utility bill or bank statement - not older than 3 months)</span>
-                </li>
-              </ul>
-              <p className="text-sm text-gray-600 mt-4">
-                ⚠️ Your account will remain <strong>pending verification</strong> until documents are approved.
-              </p>
-            </div>
-
-            {/* Premium Option */}
-            <div className="border-2 border-yellow-400 bg-gradient-to-r from-yellow-50 to-orange-50 p-6 rounded-xl">
-              <div className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  name="isPremium"
-                  id="premium"
-                  checked={formData.isPremium}
-                  onChange={handleChange}
-                  className="mt-1 w-5 h-5"
-                />
-                <label htmlFor="premium" className="flex-1 cursor-pointer">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-2xl">⭐</span>
-                    <span className="font-bold text-xl">Premium Membership - R1500/month</span>
-                  </div>
-                  <div className="grid md:grid-cols-2 gap-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Check className="text-green-600" size={16} />
-                      <span>Priority in search results</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Check className="text-green-600" size={16} />
-                      <span>Featured homepage placement</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Check className="text-green-600" size={16} />
-                      <span>Premium badge on listings</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Check className="text-green-600" size={16} />
-                      <span>8% commission (vs 10%)</span>
-                    </div>
-                  </div>
+              {/* Postal Code */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Postal Code *
                 </label>
-              </div>
-            </div>
-
-            {/* Seller Agreement Checkbox */}
-            <div className="border-2 border-red-200 bg-red-50 p-4 rounded-lg">
-              <label className="flex items-start gap-3 cursor-pointer">
                 <input
-                  type="checkbox"
-                  checked={agreeToAgreement}
-                  onChange={(e) => setAgreeToAgreement(e.target.checked)}
-                  className="mt-1 w-5 h-5 flex-shrink-0"
+                  type="text"
                   required
+                  value={formData.postal_code}
+                  onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
+                  placeholder="0001"
                 />
-                <span className="text-gray-700">
-                  I have read and agree to the{' '}
-                  <Link 
-                    href="/legal/seller-agreement" 
-                    target="_blank" 
-                    className="text-blue-600 hover:text-blue-800 font-semibold underline"
-                  >
-                    Seller Agreement
-                  </Link>
-                  {', '}
-                  <Link 
-                    href="/legal/seller-terms" 
-                    target="_blank" 
-                    className="text-blue-600 hover:text-blue-800 font-semibold underline"
-                  >
-                    Terms of Service
-                  </Link>
-                  {', and '}
-                  <Link 
-                    href="/legal/privacy" 
-                    target="_blank" 
-                    className="text-blue-600 hover:text-blue-800 font-semibold underline"
-                  >
-                    Privacy Policy
-                  </Link>
-                  {' '}*
-                </span>
-              </label>
-              <p className="text-xs text-gray-600 mt-2 ml-8">
-                A copy of the Seller Agreement will be sent to your email upon registration.
-              </p>
-            </div>
+              </div>
 
-            <button
-              type="submit"
-              disabled={isLoading || !agreeToAgreement}
-              className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-4 rounded-xl font-bold text-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Creating Account...' : 'Create Retailer Account'}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-green-600 text-white py-3 rounded-lg font-bold text-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    Creating Account...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle size={20} />
+                    Create Account
+                  </>
+                )}
+              </button>
+            </form>
+          )}
 
+          {/* Login Link */}
           <div className="mt-6 text-center">
             <p className="text-gray-600">
               Already have an account?{' '}
               <Link href="/retailer/login" className="text-blue-600 hover:text-blue-800 font-semibold">
-                Login here
+                Sign in here
               </Link>
             </p>
           </div>
+        </div>
+
+        {/* Back to Home */}
+        <div className="mt-6 text-center">
+          <Link href="/" className="text-white hover:text-blue-300 text-sm">
+            ← Back to Stone Connect
+          </Link>
         </div>
       </div>
     </div>

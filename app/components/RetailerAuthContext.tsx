@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { supabase } from '@/lib/supabase/client'
 
 interface Retailer {
   id: string
@@ -26,50 +27,86 @@ export function RetailerAuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Check if retailer is logged in (from localStorage)
-    const savedRetailer = localStorage.getItem('stone_connect_retailer')
-    if (savedRetailer) {
-      try {
-        setRetailer(JSON.parse(savedRetailer))
-      } catch (error) {
-        console.error('Error loading retailer:', error)
-      }
-    }
-    setIsLoading(false)
+    // Check if user is logged in with Supabase
+    checkUser()
   }, [])
+
+  const checkUser = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (session?.user) {
+        // Fetch retailer data from Supabase
+        const { data, error } = await supabase
+          .from('retailers')
+          .select('*')
+          .eq('email', session.user.email)
+          .single()
+
+        if (data) {
+          setRetailer({
+            id: data.id,
+            email: data.email,
+            business_name: data.business_name,
+            is_premium: data.is_premium || false,
+            rating: data.rating || 0,
+            total_sales: data.total_sales || 0,
+            total_views: data.total_views || 0
+          })
+        }
+      }
+    } catch (error) {
+      console.error('Error checking user:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // In production, this would call your API
-      // For now, we'll use a simple demo login
-      
-      // Demo credentials: any email ending with @retailer.com
-      if (email.endsWith('@retailer.com') && password === 'demo123') {
-        const demoRetailer: Retailer = {
-          id: '1',
-          email: email,
-          business_name: email.split('@')[0].replace(/[^a-zA-Z]/g, ' '),
-          is_premium: false,
-          rating: 0,
-          total_sales: 0,
-          total_views: 0,
-        }
-        
-        setRetailer(demoRetailer)
-        localStorage.setItem('stone_connect_retailer', JSON.stringify(demoRetailer))
-        return true
+      // Sign in with Supabase
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+
+      if (authError || !authData.user) {
+        console.error('Auth error:', authError)
+        return false
       }
-      
-      return false
+
+      // Fetch retailer data
+      const { data: retailerData, error: retailerError } = await supabase
+        .from('retailers')
+        .select('*')
+        .eq('email', email)
+        .single()
+
+      if (retailerError || !retailerData) {
+        console.error('Retailer fetch error:', retailerError)
+        return false
+      }
+
+      setRetailer({
+        id: retailerData.id,
+        email: retailerData.email,
+        business_name: retailerData.business_name,
+        is_premium: retailerData.is_premium || false,
+        rating: retailerData.rating || 0,
+        total_sales: retailerData.total_sales || 0,
+        total_views: retailerData.total_views || 0
+      })
+
+      return true
     } catch (error) {
       console.error('Login error:', error)
       return false
     }
   }
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut()
     setRetailer(null)
-    localStorage.removeItem('stone_connect_retailer')
   }
 
   return (
