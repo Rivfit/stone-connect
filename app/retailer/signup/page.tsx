@@ -46,74 +46,73 @@ export default function RetailerSignupPage() {
   }
 
   const handleFinalSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+  e.preventDefault()
+  setError('')
+  setLoading(true)
 
-    try {
-      // 1. Create Supabase auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-      })
+  try {
+    // 1. Create Supabase auth user
+    console.log('1. Creating auth user...')
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: formData.email,
+      password: formData.password,
+    })
 
-      if (authError) {
-        throw new Error(authError.message)
-      }
-
-      if (!authData.user) {
-        throw new Error('Failed to create user account')
-      }
-
-      // 2. Create retailer record
-      const { error: retailerError } = await supabase
-        .from('retailers')
-        .insert([{
-          id: authData.user.id, // Use Supabase auth user ID
-          email: formData.email,
-          business_name: formData.business_name,
-          phone: formData.phone,
-          address: formData.address,
-          city: formData.city,
-          province: formData.province,
-          postal_code: formData.postal_code,
-          is_premium: false,
-          rating: 0,
-          total_sales: 0,
-          total_views: 0,
-          reviews_count: 0,
-          created_at: new Date().toISOString()
-        }])
-
-      if (retailerError) {
-        console.error('Retailer creation error:', retailerError)
-        throw new Error('Failed to create retailer profile')
-      }
-
-      // 3. Send welcome email (optional)
-      try {
-        await fetch('/api/retailer/welcome-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: formData.email,
-            business_name: formData.business_name
-          })
-        })
-      } catch (emailError) {
-        console.log('Welcome email failed (non-critical):', emailError)
-      }
-
-      // Success! Redirect to login or dashboard
-      router.push('/retailer/login?registered=true')
-      
-    } catch (err: any) {
-      console.error('Signup error:', err)
-      setError(err.message || 'Failed to create account. Please try again.')
-    } finally {
-      setLoading(false)
+    if (authError) {
+      console.error('Auth error:', authError)
+      throw new Error(authError.message)
     }
+
+    if (!authData.user) {
+      throw new Error('Failed to create user account')
+    }
+
+    console.log('2. Auth user created:', authData.user.id)
+
+    // 2. Create retailer record
+    const retailerData = {
+      id: authData.user.id,
+      email: formData.email,
+      business_name: formData.business_name,
+      phone: formData.phone,
+      address: formData.address,
+      city: formData.city,
+      province: formData.province,
+      postal_code: formData.postal_code,
+      is_premium: false,
+      rating: 0,
+      created_at: new Date().toISOString()
+    }
+
+    console.log('3. Creating retailer with data:', retailerData)
+
+    const { data: retailerResult, error: retailerError } = await supabase
+      .from('retailers')
+      .insert([retailerData])
+      .select()
+
+    if (retailerError) {
+      console.error('Retailer creation error details:', {
+        message: retailerError.message,
+        details: retailerError.details,
+        hint: retailerError.hint,
+        code: retailerError.code
+      })
+      throw new Error(retailerError.message || 'Failed to create retailer profile')
+    }
+
+    console.log('4. Retailer created:', retailerResult)
+
+    // Success!
+    router.push('/retailer/login?registered=true')
+    
+  } catch (err: any) {
+    console.error('Signup error:', err)
+    setError(err.message || 'Failed to create account. Please try again.')
+  } finally {
+    setLoading(false)
   }
+}
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-gray-900 to-purple-900 flex items-center justify-center px-6 py-12">
