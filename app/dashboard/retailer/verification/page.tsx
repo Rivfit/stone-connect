@@ -3,28 +3,43 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRetailerAuth } from '../../../components/RetailerAuthContext'
+import { supabase } from '@/lib/supabase/client'
 import RetailerNav from '../../../components/RetailerNav'
 import { FileText, Upload, CheckCircle, XCircle, Clock, AlertTriangle, Download } from 'lucide-react'
 
-interface Document {
+interface VerificationDocument {
+  id: string
+  retailer_id: string
+  document_type: 'id' | 'registration' | 'proof_of_address'
+  file_url: string
+  file_name: string
+  status: 'pending' | 'approved' | 'rejected'
+  rejection_reason?: string
+  uploaded_at: string
+  reviewed_at?: string
+  reviewed_by?: string
+}
+
+interface DocumentDisplay {
   type: 'id' | 'registration' | 'proof_of_address'
   name: string
   status: 'pending' | 'approved' | 'rejected' | 'not_uploaded'
   uploadedAt?: string
   rejectionReason?: string
   fileUrl?: string
+  fileName?: string
 }
 
 export default function VerificationPage() {
   const router = useRouter()
   const { retailer, isLoading } = useRetailerAuth()
-  const [verificationStatus, setVerificationStatus] = useState<'unverified' | 'pending' | 'verified'>('unverified')
-  const [documents, setDocuments] = useState<Document[]>([
+  const [documents, setDocuments] = useState<DocumentDisplay[]>([
     { type: 'id', name: "Owner's ID Document", status: 'not_uploaded' },
     { type: 'registration', name: 'Business Registration Certificate', status: 'not_uploaded' },
     { type: 'proof_of_address', name: 'Proof of Address', status: 'not_uploaded' }
   ])
   const [uploading, setUploading] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!isLoading && !retailer) {
@@ -39,22 +54,52 @@ export default function VerificationPage() {
   }, [retailer])
 
   const fetchVerificationStatus = async () => {
+    if (!retailer) return
+
     try {
-      // TODO: Fetch actual verification status from API
-      // For now, mock data
-      setVerificationStatus('pending')
-      setDocuments([
-        { type: 'id', name: "Owner's ID Document", status: 'approved', uploadedAt: '2025-01-15' },
-        { type: 'registration', name: 'Business Registration Certificate', status: 'pending', uploadedAt: '2025-01-15' },
-        { type: 'proof_of_address', name: 'Proof of Address', status: 'not_uploaded' }
-      ])
+      console.log('Fetching verification documents for retailer:', retailer.id)
+      
+      const { data, error } = await supabase
+        .from('verification_documents')
+        .select('*')
+        .eq('retailer_id', retailer.id)
+        .order('uploaded_at', { ascending: false })
+
+      if (error) {
+        console.error('Error fetching verification documents:', error)
+        throw error
+      }
+
+      console.log('Verification documents fetched:', data)
+
+      // Map database documents to display format
+      const updatedDocs = documents.map(doc => {
+        const dbDoc = data?.find((d: VerificationDocument) => d.document_type === doc.type)
+        
+        if (dbDoc) {
+          return {
+            ...doc,
+            status: dbDoc.status,
+            uploadedAt: dbDoc.uploaded_at,
+            rejectionReason: dbDoc.rejection_reason,
+            fileUrl: dbDoc.file_url,
+            fileName: dbDoc.file_name
+          }
+        }
+        
+        return doc
+      })
+
+      setDocuments(updatedDocs)
     } catch (error) {
-      console.error('Error fetching verification status:', error)
+      console.error('Error in fetchVerificationStatus:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
   const handleFileUpload = async (documentType: string, file: File) => {
-    if (!file) return
+    if (!file || !retailer) return
 
     // Validate file type
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
@@ -72,27 +117,77 @@ export default function VerificationPage() {
     setUploading(documentType)
 
     try {
+      // Upload to Cloudinary
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('documentType', documentType)
-      formData.append('retailerId', retailer?.id || '')
+      formData.append('upload_preset', 'stone_connect_unsigned')
+      formData.append('cloud_name', process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!)
+      formData.append('folder', `verification_documents/${retailer.id}`)
 
-      const response = await fetch('/api/retailer/upload-document', {
-        method: 'POST',
-        body: formData
-      })
+      console.log('Uploading file to Cloudinary...')
+      const cloudinaryResponse = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/upload`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      )
 
-      const data = await response.json()
-
-      if (data.success) {
-        alert('✅ Document uploaded successfully! We will review it within 24-48 hours.')
-        fetchVerificationStatus()
-      } else {
-        alert('Failed to upload document: ' + (data.error || 'Unknown error'))
+      const cloudinaryData = await cloudinaryResponse.json()
+      
+      if (!cloudinaryData.secure_url) {
+        throw new Error('Failed to upload file to Cloudinary')
       }
+
+      console.log('File uploaded to Cloudinary:', cloudinaryData.secure_url)
+
+      // Check if document already exists
+      const { data: existingDoc } = await supabase
+        .from('verification_documents')
+        .select('id')
+        .eq('retailer_id', retailer.id)
+        .eq('document_type', documentType)
+        .single()
+
+      if (existingDoc) {
+        // Update existing document
+        console.log('Updating existing document...')
+        const { error: updateError } = await supabase
+          .from('verification_documents')
+          .update({
+            file_url: cloudinaryData.secure_url,
+            file_name: file.name,
+            status: 'pending',
+            uploaded_at: new Date().toISOString(),
+            rejection_reason: null,
+            reviewed_at: null,
+            reviewed_by: null
+          })
+          .eq('id', existingDoc.id)
+
+        if (updateError) throw updateError
+      } else {
+        // Insert new document
+        console.log('Inserting new document...')
+        const { error: insertError } = await supabase
+          .from('verification_documents')
+          .insert({
+            retailer_id: retailer.id,
+            document_type: documentType,
+            file_url: cloudinaryData.secure_url,
+            file_name: file.name,
+            status: 'pending',
+            uploaded_at: new Date().toISOString()
+          })
+
+        if (insertError) throw insertError
+      }
+
+      alert('✅ Document uploaded successfully! We will review it within 24-48 hours.')
+      fetchVerificationStatus()
     } catch (error) {
       console.error('Upload error:', error)
-      alert('Failed to upload document. Please try again.')
+      alert('❌ Failed to upload document. Please try again.')
     } finally {
       setUploading(null)
     }
@@ -196,6 +291,20 @@ export default function VerificationPage() {
     )
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <RetailerNav />
+        <div className="max-w-5xl mx-auto px-6 py-8">
+          <div className="text-center py-20">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <p className="text-gray-600 mt-4">Loading verification status...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <RetailerNav />
@@ -217,7 +326,16 @@ export default function VerificationPage() {
                   <div>
                     <h3 className="text-xl font-bold">{doc.name}</h3>
                     {doc.uploadedAt && (
-                      <p className="text-sm text-gray-500">Uploaded: {new Date(doc.uploadedAt).toLocaleDateString()}</p>
+                      <p className="text-sm text-gray-500">
+                        Uploaded: {new Date(doc.uploadedAt).toLocaleDateString('en-ZA', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    )}
+                    {doc.fileName && (
+                      <p className="text-xs text-gray-400">{doc.fileName}</p>
                     )}
                   </div>
                 </div>
@@ -305,11 +423,15 @@ export default function VerificationPage() {
                 </div>
               )}
 
-              {/* Download/View Button for uploaded docs */}
-              {doc.status === 'approved' && doc.fileUrl && (
+              {/* View Document Button */}
+              {(doc.status === 'approved' || doc.status === 'pending') && doc.fileUrl && (
                 <button
                   onClick={() => window.open(doc.fileUrl, '_blank')}
-                  className="flex items-center justify-center gap-2 w-full bg-green-100 text-green-700 py-3 rounded-lg font-semibold hover:bg-green-200 transition-colors"
+                  className={`flex items-center justify-center gap-2 w-full py-3 rounded-lg font-semibold transition-colors ${
+                    doc.status === 'approved'
+                      ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                      : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                  }`}
                 >
                   <Download size={20} />
                   View Uploaded Document

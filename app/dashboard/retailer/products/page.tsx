@@ -6,10 +6,11 @@ import { useRetailerAuth } from '../../../components/RetailerAuthContext'
 import { supabase } from '@/lib/supabase/client'
 import RetailerNav from '../../../components/RetailerNav'
 import Link from 'next/link'
-import { Plus, Eye, TrendingUp, Edit, Trash2, X, Upload, Check } from 'lucide-react'
+import { Plus, Eye, TrendingUp, Edit, Trash2, X, Upload, Check, AlertCircle } from 'lucide-react'
 
 interface Product {
   id: string
+  retailer_id: string
   type: string
   material: string
   colors: string[]
@@ -24,6 +25,7 @@ interface Product {
   installation_option?: 'included' | 'range' | 'contact'
   installation_price_min?: number
   installation_price_max?: number
+  created_at: string
 }
 
 export default function ManageProductsPage() {
@@ -31,6 +33,7 @@ export default function ManageProductsPage() {
   const { retailer, isLoading } = useRetailerAuth()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [isVerified, setIsVerified] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadingImages, setUploadingImages] = useState(false)
@@ -56,29 +59,50 @@ export default function ManageProductsPage() {
 
   useEffect(() => {
     if (retailer) {
+      checkVerificationStatus()
       fetchProducts()
     }
   }, [retailer])
 
-  const fetchProducts = async () => {
+  const checkVerificationStatus = async () => {
+    if (!retailer) return
+
     try {
       const { data, error } = await supabase
+        .from('verification_documents')
+        .select('status')
+        .eq('retailer_id', retailer.id)
+      
+      if (error) throw error
+
+      // Check if all required documents are approved
+      const hasAllApproved = data && data.length >= 3 && 
+        data.every(doc => doc.status === 'approved')
+      
+      setIsVerified(hasAllApproved)
+    } catch (error) {
+      console.error('Error checking verification:', error)
+    }
+  }
+
+  const fetchProducts = async () => {
+    if (!retailer) return
+
+    try {
+      console.log('Fetching products for retailer:', retailer.id)
+      
+      const { data, error } = await supabase
         .from('products')
-        .select(`
-          *,
-          retailers (
-            business_name,
-            address,
-            city,
-            province,
-            rating,
-            is_premium
-          )
-        `)
-        .eq('is_active', true)
+        .select('*')
+        .eq('retailer_id', retailer.id)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error:', error)
+        throw error
+      }
+
+      console.log('Products fetched:', data?.length || 0)
       setProducts(data || [])
     } catch (error) {
       console.error('Error fetching products:', error)
@@ -164,7 +188,6 @@ export default function ManageProductsPage() {
     e.preventDefault()
     if (!editingProduct) return
 
-    // Validate installation pricing if range is selected
     if (!editFormData.installationIncluded && editFormData.installationOption === 'range') {
       if (!editFormData.installationPriceMin || !editFormData.installationPriceMax) {
         alert('Please provide both minimum and maximum installation prices for the range option.')
@@ -219,7 +242,7 @@ export default function ManageProductsPage() {
   }
 
   const handleDelete = async (productId: string) => {
-    if (!confirm('Are you sure you want to delete this product?')) return
+    if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) return
 
     try {
       const { error } = await supabase
@@ -270,18 +293,39 @@ export default function ManageProductsPage() {
       <RetailerNav />
 
       <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Verification Warning */}
+        {!isVerified && (
+          <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-6 mb-8 flex items-start gap-4">
+            <AlertCircle className="text-yellow-600 flex-shrink-0 mt-1" size={24} />
+            <div>
+              <h3 className="font-bold text-yellow-800 text-lg mb-2">Account Not Verified</h3>
+              <p className="text-yellow-700 mb-3">
+                You cannot add products until your account is verified. Please complete the verification process.
+              </p>
+              <Link
+                href="/dashboard/retailer/verification"
+                className="inline-block bg-yellow-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-yellow-700 transition-colors"
+              >
+                Go to Verification →
+              </Link>
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-4xl font-bold mb-2">Manage Products</h1>
             <p className="text-gray-600">View and manage all your listed products</p>
           </div>
-          <Link
-            href="/dashboard/retailer/products/add"
-            className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-          >
-            <Plus size={20} />
-            Add Product
-          </Link>
+          {isVerified && (
+            <Link
+              href="/dashboard/retailer/products/add"
+              className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+            >
+              <Plus size={20} />
+              Add Product
+            </Link>
+          )}
         </div>
 
         {loading ? (
@@ -293,14 +337,20 @@ export default function ManageProductsPage() {
           <div className="bg-white rounded-xl p-12 text-center shadow-lg">
             <div className="text-6xl mb-4">📦</div>
             <h3 className="text-2xl font-bold mb-4">No products yet</h3>
-            <p className="text-gray-600 mb-6">Start by adding your first memorial product</p>
-            <Link
-              href="/dashboard/retailer/products/add"
-              className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-            >
-              <Plus size={20} />
-              Add Your First Product
-            </Link>
+            <p className="text-gray-600 mb-6">
+              {isVerified 
+                ? 'Start by adding your first memorial product'
+                : 'Complete verification to start adding products'}
+            </p>
+            {isVerified && (
+              <Link
+                href="/dashboard/retailer/products/add"
+                className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+              >
+                <Plus size={20} />
+                Add Your First Product
+              </Link>
+            )}
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -333,11 +383,11 @@ export default function ManageProductsPage() {
                   <div className="flex items-center justify-between text-sm text-gray-600 mb-4 pb-4 border-b">
                     <div className="flex items-center gap-1">
                       <Eye size={14} />
-                      <span>{product.views_count}</span>
+                      <span>{product.views_count || 0}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <TrendingUp size={14} />
-                      <span>{product.purchases_count} sold</span>
+                      <span>{product.purchases_count || 0} sold</span>
                     </div>
                     <div>
                       <span className={`px-2 py-1 rounded text-xs font-semibold ${
@@ -370,241 +420,6 @@ export default function ManageProductsPage() {
           </div>
         )}
       </div>
-
-      {/* Edit Modal */}
-      {editingProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-4xl w-full my-8 max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Edit Product</h2>
-              <button
-                onClick={() => setEditingProduct(null)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <form onSubmit={handleUpdateSubmit} className="p-6 space-y-6">
-              {/* Image Upload Section */}
-              <div className="border-2 border-dashed border-gray-300 rounded-xl p-6">
-                <label className="block font-semibold mb-3 text-gray-700">Product Images</label>
-                
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageUpload}
-                  disabled={uploadingImages}
-                  className="hidden"
-                  id="edit-image-upload"
-                />
-                
-                <label
-                  htmlFor="edit-image-upload"
-                  className={`flex flex-col items-center justify-center py-6 cursor-pointer hover:bg-gray-50 rounded-lg transition-colors ${
-                    uploadingImages ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                >
-                  <Upload className="text-blue-600 mb-2" size={32} />
-                  <p className="text-sm font-semibold text-gray-700">
-                    {uploadingImages ? 'Uploading...' : 'Click to upload images'}
-                  </p>
-                </label>
-
-                {uploadedImages.length > 0 && (
-                  <div className="mt-4 grid grid-cols-4 gap-3">
-                    {uploadedImages.map((url, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={url}
-                          alt={`Product ${index + 1}`}
-                          className="w-full h-24 object-cover rounded-lg border-2 border-gray-200"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeImage(index)}
-                          className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-semibold mb-2">Product Type *</label>
-                  <input
-                    type="text"
-                    name="type"
-                    required
-                    value={editFormData.type}
-                    onChange={handleEditChange}
-                    className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold mb-2">Material *</label>
-                  <select
-                    name="material"
-                    required
-                    value={editFormData.material}
-                    onChange={handleEditChange}
-                    className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
-                  >
-                    <option value="">Select material</option>
-                    <option value="Black Granite">Black Granite</option>
-                    <option value="Grey Granite">Grey Granite</option>
-                    <option value="Red Granite">Red Granite</option>
-                    <option value="White Marble">White Marble</option>
-                    <option value="Rose Marble">Rose Marble</option>
-                    <option value="Sandstone">Sandstone</option>
-                    <option value="Limestone">Limestone</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-semibold mb-2">Colors (comma separated) *</label>
-                  <input
-                    type="text"
-                    name="colors"
-                    required
-                    value={editFormData.colors}
-                    onChange={handleEditChange}
-                    className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold mb-2">Price (R) *</label>
-                  <input
-                    type="number"
-                    name="basePrice"
-                    required
-                    min="1000"
-                    step="100"
-                    value={editFormData.basePrice}
-                    onChange={handleEditChange}
-                    className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* Installation Section */}
-              <div className="border-2 border-blue-200 bg-blue-50 rounded-xl p-4">
-                <h3 className="font-bold text-lg mb-3">Installation Options</h3>
-                
-                <div className="mb-3">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      name="installationIncluded"
-                      checked={editFormData.installationIncluded}
-                      onChange={handleEditChange}
-                      className="w-4 h-4"
-                    />
-                    <span className="font-semibold">Installation included in price</span>
-                  </label>
-                </div>
-
-                {!editFormData.installationIncluded && (
-                  <div className="space-y-3 pl-6 border-l-4 border-blue-300">
-                    <div>
-                      <label className="block font-semibold mb-2">Installation Option *</label>
-                      <select
-                        name="installationOption"
-                        value={editFormData.installationOption}
-                        onChange={handleEditChange}
-                        className="w-full border-2 p-2 rounded-lg focus:border-blue-500 outline-none bg-white"
-                      >
-                        <option value="range">Price Range</option>
-                        <option value="contact">Contact for Quote</option>
-                      </select>
-                    </div>
-
-                    {editFormData.installationOption === 'range' && (
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block font-semibold mb-2">Min Price (R) *</label>
-                          <input
-                            type="number"
-                            name="installationPriceMin"
-                            required={!editFormData.installationIncluded && editFormData.installationOption === 'range'}
-                            min="0"
-                            step="100"
-                            value={editFormData.installationPriceMin}
-                            onChange={handleEditChange}
-                            className="w-full border-2 p-2 rounded-lg focus:border-blue-500 outline-none"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block font-semibold mb-2">Max Price (R) *</label>
-                          <input
-                            type="number"
-                            name="installationPriceMax"
-                            required={!editFormData.installationIncluded && editFormData.installationOption === 'range'}
-                            min="0"
-                            step="100"
-                            value={editFormData.installationPriceMax}
-                            onChange={handleEditChange}
-                            className="w-full border-2 p-2 rounded-lg focus:border-blue-500 outline-none"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="block font-semibold mb-2">Description *</label>
-                <textarea
-                  name="description"
-                  required
-                  value={editFormData.description}
-                  onChange={handleEditChange}
-                  className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none resize-none"
-                  rows={4}
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setEditingProduct(null)}
-                  className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || uploadingImages}
-                  className="flex-1 bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      Updating...
-                    </>
-                  ) : (
-                    <>
-                      <Check size={20} />
-                      Update Product
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

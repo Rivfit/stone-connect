@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useRetailerAuth } from '../../../../components/RetailerAuthContext'
 import { supabase } from '@/lib/supabase/client'
 import RetailerNav from '../../../../components/RetailerNav'
-import { ArrowLeft, Upload, Check, X, Image as ImageIcon } from 'lucide-react'
+import { ArrowLeft, Upload, Check, X, Image as ImageIcon, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
 export default function AddProductPage() {
@@ -14,6 +14,8 @@ export default function AddProductPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadingImages, setUploadingImages] = useState(false)
   const [uploadedImages, setUploadedImages] = useState<string[]>([])
+  const [isVerified, setIsVerified] = useState(false)
+  const [checkingVerification, setCheckingVerification] = useState(true)
 
   const [formData, setFormData] = useState({
     type: '',
@@ -22,7 +24,7 @@ export default function AddProductPage() {
     basePrice: '',
     description: '',
     installationIncluded: false,
-    installationOption: 'included', // 'included' | 'range' | 'contact'
+    installationOption: 'included',
     installationPriceMin: '',
     installationPriceMax: ''
   })
@@ -33,12 +35,32 @@ export default function AddProductPage() {
     }
   }, [retailer, isLoading, router])
 
-  if (isLoading || !retailer) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    )
+  useEffect(() => {
+    if (retailer) {
+      checkVerificationStatus()
+    }
+  }, [retailer])
+
+  const checkVerificationStatus = async () => {
+    if (!retailer) return
+
+    try {
+      const { data, error } = await supabase
+        .from('verification_documents')
+        .select('status')
+        .eq('retailer_id', retailer.id)
+      
+      if (error) throw error
+
+      const hasAllApproved = data && data.length >= 3 && 
+        data.every(doc => doc.status === 'approved')
+      
+      setIsVerified(hasAllApproved)
+    } catch (error) {
+      console.error('Error checking verification:', error)
+    } finally {
+      setCheckingVerification(false)
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -70,6 +92,7 @@ export default function AddProductPage() {
         formDataImg.append('file', file)
         formDataImg.append('upload_preset', 'stone_connect_unsigned')
         formDataImg.append('cloud_name', process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!)
+        formDataImg.append('folder', `products/${retailer?.id}`)
 
         const response = await fetch(
           `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
@@ -101,13 +124,23 @@ export default function AddProductPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    if (!retailer) {
+      alert('Error: No retailer information found')
+      return
+    }
+
+    if (!isVerified) {
+      alert('Your account must be verified before you can add products')
+      router.push('/dashboard/retailer/verification')
+      return
+    }
+    
     if (uploadedImages.length === 0) {
       if (!confirm('No images uploaded. Continue without images?')) {
         return
       }
     }
 
-    // Validate installation pricing if range is selected
     if (!formData.installationIncluded && formData.installationOption === 'range') {
       if (!formData.installationPriceMin || !formData.installationPriceMax) {
         alert('Please provide both minimum and maximum installation prices for the range option.')
@@ -124,7 +157,6 @@ export default function AddProductPage() {
     try {
       const colorsArray = formData.colors.split(',').map(c => c.trim())
 
-      // Prepare installation data
       const installationData = {
         installation_included: formData.installationIncluded,
         installation_option: formData.installationIncluded ? 'included' : formData.installationOption,
@@ -136,9 +168,12 @@ export default function AddProductPage() {
           : null,
       }
 
+      console.log('Creating product for retailer:', retailer.id)
+
       const { data, error } = await supabase
         .from('products')
         .insert({
+          retailer_id: retailer.id,
           type: formData.type,
           material: formData.material,
           colors: colorsArray,
@@ -153,16 +188,73 @@ export default function AddProductPage() {
         })
         .select()
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error:', error)
+        throw error
+      }
 
+      console.log('Product created successfully:', data)
       alert('✅ Product added successfully!')
       router.push('/dashboard/retailer/products')
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding product:', error)
-      alert('❌ Error adding product. Please try again.')
+      alert(`❌ Error adding product: ${error.message || 'Please try again.'}`)
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  if (isLoading || !retailer) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (checkingVerification) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <RetailerNav />
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          <div className="text-center py-20">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <p className="text-gray-600 mt-4">Checking verification status...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isVerified) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <RetailerNav />
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          <Link
+            href="/dashboard/retailer/products"
+            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-6"
+          >
+            <ArrowLeft size={20} />
+            Back to Products
+          </Link>
+
+          <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-8 text-center">
+            <AlertCircle className="mx-auto text-yellow-600 mb-4" size={64} />
+            <h2 className="text-2xl font-bold text-yellow-800 mb-4">Account Not Verified</h2>
+            <p className="text-yellow-700 mb-6">
+              You must complete the verification process before you can add products.
+            </p>
+            <Link
+              href="/dashboard/retailer/verification"
+              className="inline-block bg-yellow-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-yellow-700 transition-colors"
+            >
+              Go to Verification →
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -211,7 +303,6 @@ export default function AddProductPage() {
               <p className="text-sm text-gray-500">PNG, JPG up to 10MB each</p>
             </label>
 
-            {/* Image Preview Grid */}
             {uploadedImages.length > 0 && (
               <div className="mt-6 grid grid-cols-3 gap-4">
                 {uploadedImages.map((url, index) => (
@@ -234,7 +325,6 @@ export default function AddProductPage() {
             )}
           </div>
 
-          {/* Rest of Form */}
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <label className="block font-semibold mb-2 text-gray-700">
