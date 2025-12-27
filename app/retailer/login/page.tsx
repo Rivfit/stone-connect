@@ -28,7 +28,8 @@ export default function RetailerLoginPage() {
       const success = await login(formData.email, formData.password)
       
       if (success) {
-        router.push('/retailer/dashboard')
+        // Changed to match your file structure
+        router.push('/dashboard/retailer')
       } else {
         setError('Invalid email or password. Please try again.')
       }
@@ -145,7 +146,7 @@ export default function RetailerLoginPage() {
           <Link href="/" className="text-white hover:text-blue-300 text-sm">
             ← Back to Stone Connect
           </Link>
-        </div>
+          </div>
       </div>
     </div>
   )

@@ -12,20 +12,30 @@ export default function SettingsPage() {
   const [isPremium, setIsPremium] = useState(false)
 
   useEffect(() => {
+    console.log('🔍 Auth Debug:', { retailer, isLoading })
     if (!isLoading && !retailer) {
+      console.log('❌ No retailer found, redirecting to login')
       router.push('/retailer/login')
-    }
-    if (retailer) {
-      setIsPremium(retailer.is_premium)
     }
   }, [retailer, isLoading, router])
 
-  if (isLoading || !retailer) {
+  useEffect(() => {
+    if (retailer?.is_premium !== undefined) {
+      setIsPremium(retailer.is_premium)
+    }
+  }, [retailer])
+
+  if (isLoading) {
+    console.log('⏳ Loading retailer data...')
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     )
+  }
+
+  if (!retailer) {
+    return null
   }
 
   const handlePremiumToggle = () => {
@@ -57,14 +67,14 @@ export default function SettingsPage() {
               <Store className="text-gray-400 mt-1" size={20} />
               <div>
                 <p className="text-sm text-gray-600">Business Name</p>
-                <p className="font-semibold">{retailer.business_name}</p>
+                <p className="font-semibold">{retailer.business_name || 'N/A'}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <Mail className="text-gray-400 mt-1" size={20} />
               <div>
                 <p className="text-sm text-gray-600">Email</p>
-                <p className="font-semibold">{retailer.email}</p>
+                <p className="font-semibold">{retailer.email || 'N/A'}</p>
               </div>
             </div>
           </div>

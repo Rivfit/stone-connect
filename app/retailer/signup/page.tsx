@@ -58,6 +58,20 @@ export default function RetailerSignupPage() {
       password: formData.password,
     })
 
+    // After successful signup:
+if (authData.user && !authData.session) {
+  // Email confirmation required
+  setError('')
+  alert('✅ Account created! Please check your email to confirm your account before logging in.')
+  router.push('/retailer/login?confirm_email=true')
+  return
+}
+
+// If session exists, they're auto-logged in
+if (authData.session) {
+  router.push('/dashboard/retailer')
+  return
+}
     if (authError) {
       console.error('Auth error:', authError)
       throw new Error(authError.message)
@@ -113,6 +127,7 @@ export default function RetailerSignupPage() {
     setLoading(false)
   }
 }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-gray-900 to-purple-900 flex items-center justify-center px-6 py-12">
