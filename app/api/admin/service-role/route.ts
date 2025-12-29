@@ -2,20 +2,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Service role client - bypasses RLS
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!, // This is secret!
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
+// Helper function to get admin client
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!, // This is secret!
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
     }
-  }
-)
+  )
+}
 
 export async function POST(req: NextRequest) {
   try {
+    // Create the admin client inside the request handler
+    const supabaseAdmin = getSupabaseAdmin()
+    
     const { documentId, action, rejectionReason } = await req.json()
 
     // TODO: Add admin authentication check here
