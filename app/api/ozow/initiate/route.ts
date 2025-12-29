@@ -38,15 +38,16 @@ export async function POST(req: NextRequest) {
     const successUrl = `${baseUrl}/checkout/success?orderId=${orderId}`
     const notifyUrl = `${baseUrl}/api/ozow/notify`
     
-    // Generate hash for security (MUST be lowercase as per Ozow docs)
-    // IMPORTANT: Hash uses email, form uses full name for Customer field
-    const inputString = `${siteCode}${amount}${orderId}${customer.email.toLowerCase()}${cancelUrl}${errorUrl}${successUrl}${notifyUrl}${isTest}${privateKey}`
+    // Generate hash for security
+    // Per Ozow docs: SiteCode + CountryCode + CurrencyCode + Amount + TransactionReference + BankReference + Optional1-5 + CancelUrl + ErrorUrl + SuccessUrl + NotifyUrl + IsTest + PrivateKey
+    // NOTE: Customer field is NOT included in hash!
+    const inputString = `${siteCode}${amount}${orderId}${cancelUrl}${errorUrl}${successUrl}${notifyUrl}${isTest}${privateKey}`
     
-    console.log('Hash input string:', inputString)
+    console.log('Hash input string (without customer):', inputString)
     
     const hashCheck = crypto
       .createHash('sha512')
-      .update(inputString)
+      .update(inputString.toLowerCase())
       .digest('hex')
     
     console.log('Generated hash:', hashCheck)
@@ -58,12 +59,12 @@ export async function POST(req: NextRequest) {
       CurrencyCode: 'ZAR',
       Amount: amount,
       TransactionReference: orderId,
-      BankReference: `Stone Connect Order ${orderId.slice(0, 8)}`,
-      Customer: customer.email, // Use email here to match hash
-      Optional1: `${customer.firstName} ${customer.lastName}`, // Name in optional field
+      BankReference: `Order ${orderId.slice(0, 8)}`,
+      Customer: `${customer.firstName} ${customer.lastName}`,
+      Optional1: customer.email,
       Optional2: customer.phone || '',
-      Optional3: '',
-      Optional4: '',
+      Optional3: customer.address || '',
+      Optional4: `${customer.city || ''} ${customer.postalCode || ''}`,
       Optional5: '',
       CancelUrl: cancelUrl,
       ErrorUrl: errorUrl,
