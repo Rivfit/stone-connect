@@ -121,10 +121,11 @@ export default function VerificationPage() {
       const formData = new FormData()
       formData.append('file', file)
       formData.append('upload_preset', 'stone_connect_unsigned')
-      formData.append('cloud_name', process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!)
       formData.append('folder', `verification_documents/${retailer.id}`)
 
       console.log('Uploading file to Cloudinary...')
+      console.log('Cloud name:', process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME)
+      
       const cloudinaryResponse = await fetch(
         `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/upload`,
         {
@@ -134,9 +135,10 @@ export default function VerificationPage() {
       )
 
       const cloudinaryData = await cloudinaryResponse.json()
+      console.log('Cloudinary response:', cloudinaryData)
       
       if (!cloudinaryData.secure_url) {
-        throw new Error('Failed to upload file to Cloudinary')
+        throw new Error(cloudinaryData.error?.message || 'Failed to upload file to Cloudinary')
       }
 
       console.log('File uploaded to Cloudinary:', cloudinaryData.secure_url)
