@@ -44,25 +44,50 @@ export default function CheckoutPage() {
     setIsProcessing(true)
 
     try {
-      const res = await fetch('/api/checkout', {
+      // Call Ozow initiate endpoint
+      const res = await fetch('/api/ozow/initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cart,
           cartTotal,
-          customer: formData,
-          agreedToTerms: true,
-          agreedAt: new Date().toISOString()
+          customer: {
+            ...formData,
+            agreedToTerms: true,
+            agreedAt: new Date().toISOString()
+          }
         }),
       })
 
-      const order = await res.json()
-      if (!order || order.error) throw new Error('Order creation failed')
+      const data = await res.json()
 
-      clearCart()
-      window.location.href = order.payfastUrl
+      if (data.success && data.formData && data.ozowUrl) {
+        console.log('Redirecting to Ozow payment:', data.orderId)
+        
+        // Clear cart before redirect
+        clearCart()
+        
+        // Create a hidden form and submit it (Ozow requires POST)
+        const form = document.createElement('form')
+        form.method = 'POST'
+        form.action = data.ozowUrl
+        
+        // Add all form fields from Ozow
+        Object.entries(data.formData).forEach(([key, value]) => {
+          const input = document.createElement('input')
+          input.type = 'hidden'
+          input.name = key
+          input.value = value as string
+          form.appendChild(input)
+        })
+        
+        document.body.appendChild(form)
+        form.submit()
+      } else {
+        throw new Error(data.error || 'Failed to initiate payment')
+      }
     } catch (err) {
-      console.error(err)
+      console.error('Payment error:', err)
       alert('Something went wrong. Please try again.')
       setIsProcessing(false)
     }
@@ -174,13 +199,24 @@ export default function CheckoutPage() {
               <button 
                 type="submit" 
                 disabled={isProcessing || !agreeToTerms} 
-                className="w-full mt-8 bg-gradient-to-r from-green-600 to-green-700 text-white py-4 rounded-xl text-xl font-bold hover:from-green-700 hover:to-green-800 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full mt-8 bg-gradient-to-r from-green-600 to-green-700 text-white py-4 rounded-xl text-xl font-bold hover:from-green-700 hover:to-green-800 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
               >
-                {isProcessing ? 'Processing...' : `Pay ${formatPrice(cartTotal)}`}
+                {isProcessing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    Redirecting to Ozow...
+                  </>
+                ) : (
+                  <>
+                    <Shield size={24} />
+                    Pay {formatPrice(cartTotal)} with Ozow
+                  </>
+                )}
               </button>
 
-              <p className="text-sm text-gray-500 text-center mt-4">
-                🔒 Secure payment processed by PayFast
+              <p className="text-sm text-gray-500 text-center mt-4 flex items-center justify-center gap-2">
+                <Shield size={16} className="text-green-600" />
+                Secure instant payment processed by Ozow
               </p>
             </form>
           </div>
@@ -201,6 +237,22 @@ export default function CheckoutPage() {
                     <span>Total:</span>
                     <span className="text-green-600">{formatPrice(cartTotal)}</span>
                   </div>
+                </div>
+              </div>
+
+              {/* Trust Badges */}
+              <div className="mt-6 pt-6 border-t space-y-3 text-sm text-gray-600">
+                <div className="flex items-center gap-2">
+                  <Shield size={16} className="text-green-600" />
+                  <span>Instant bank payment</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Shield size={16} className="text-green-600" />
+                  <span>Secure checkout</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Mail size={16} className="text-blue-600" />
+                  <span>Email confirmation</span>
                 </div>
               </div>
             </div>
