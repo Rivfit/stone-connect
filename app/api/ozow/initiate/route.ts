@@ -39,14 +39,14 @@ export async function POST(req: NextRequest) {
     const notifyUrl = `${baseUrl}/api/ozow/notify`
     
     // Generate hash for security (MUST be lowercase as per Ozow docs)
-    // IMPORTANT: No spaces, exact order, all lowercase before hashing
+    // IMPORTANT: Hash uses email, form uses full name for Customer field
     const inputString = `${siteCode}${amount}${orderId}${customer.email.toLowerCase()}${cancelUrl}${errorUrl}${successUrl}${notifyUrl}${isTest}${privateKey}`
     
     console.log('Hash input string:', inputString)
     
     const hashCheck = crypto
       .createHash('sha512')
-      .update(inputString.toLowerCase())
+      .update(inputString)
       .digest('hex')
     
     console.log('Generated hash:', hashCheck)
@@ -59,9 +59,9 @@ export async function POST(req: NextRequest) {
       Amount: amount,
       TransactionReference: orderId,
       BankReference: `Stone Connect Order ${orderId.slice(0, 8)}`,
-      Customer: `${customer.firstName} ${customer.lastName}`,
-      Optional1: customer.phone || '',
-      Optional2: '',
+      Customer: customer.email, // Use email here to match hash
+      Optional1: `${customer.firstName} ${customer.lastName}`, // Name in optional field
+      Optional2: customer.phone || '',
       Optional3: '',
       Optional4: '',
       Optional5: '',
