@@ -76,7 +76,7 @@ export default function AdminDashboard() {
   const [selectedDoc, setSelectedDoc] = useState<VerificationDoc | null>(null)
   const [reviewNote, setReviewNote] = useState('')
 
-  const ADMIN_PASSWORD = 'adminSTONE25Ventures' // Change this to your secure password
+  const ADMIN_PASSWORD = 'admin123' // Change this to your secure password
 
   useEffect(() => {
     const auth = sessionStorage.getItem('admin_authenticated')
@@ -198,21 +198,24 @@ export default function AdminDashboard() {
     if (!confirm('Approve this document?')) return
 
     try {
-      const { error } = await supabase
-        .from('verification_documents')
-        .update({
-          status: 'approved',
-          reviewed_at: new Date().toISOString(),
-          reviewed_by: 'admin',
-          rejection_reason: null
+      const response = await fetch('/api/admin/approve-document', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          documentId: docId,
+          action: 'approve'
         })
-        .eq('id', docId)
+      })
 
-      if (error) throw error
+      const data = await response.json()
 
-      alert('✅ Document approved!')
-      setSelectedDoc(null)
-      fetchVerificationDocs()
+      if (data.success) {
+        alert('✅ Document approved!')
+        setSelectedDoc(null)
+        fetchVerificationDocs()
+      } else {
+        throw new Error(data.error || 'Failed to approve document')
+      }
     } catch (error) {
       console.error('Error approving document:', error)
       alert('❌ Error approving document')
@@ -228,22 +231,26 @@ export default function AdminDashboard() {
     if (!confirm('Reject this document?')) return
 
     try {
-      const { error } = await supabase
-        .from('verification_documents')
-        .update({
-          status: 'rejected',
-          reviewed_at: new Date().toISOString(),
-          reviewed_by: 'admin',
-          rejection_reason: reviewNote
+      const response = await fetch('/api/admin/approve-document', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          documentId: docId,
+          action: 'reject',
+          rejectionReason: reviewNote
         })
-        .eq('id', docId)
+      })
 
-      if (error) throw error
+      const data = await response.json()
 
-      alert('✅ Document rejected')
-      setSelectedDoc(null)
-      setReviewNote('')
-      fetchVerificationDocs()
+      if (data.success) {
+        alert('✅ Document rejected')
+        setSelectedDoc(null)
+        setReviewNote('')
+        fetchVerificationDocs()
+      } else {
+        throw new Error(data.error || 'Failed to reject document')
+      }
     } catch (error) {
       console.error('Error rejecting document:', error)
       alert('❌ Error rejecting document')
