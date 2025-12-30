@@ -257,6 +257,40 @@ export default function AdminDashboard() {
     }
   }
 
+  // UPDATED: Better document viewing with debugging
+  const handleViewDocument = (doc: VerificationDoc) => {
+    console.log('🔍 === DOCUMENT VIEW DEBUG ===')
+    console.log('📄 Full document object:', doc)
+    console.log('🔗 File URL:', doc.file_url)
+    console.log('📝 File name:', doc.file_name)
+    
+    if (!doc.file_url) {
+      alert('❌ No file URL available for this document')
+      return
+    }
+
+    try {
+      const url = new URL(doc.file_url)
+      console.log('🌐 URL breakdown:')
+      console.log('  - Protocol:', url.protocol)
+      console.log('  - Host:', url.hostname)
+      console.log('  - Path:', url.pathname)
+      console.log('  - Full URL:', url.href)
+      
+      // Check if URL has "authenticated" in path (which causes 401)
+      if (url.pathname.includes('/authenticated/')) {
+        console.warn('⚠️ WARNING: URL contains /authenticated/ - this will cause 401 error!')
+        alert('⚠️ This document is set as private in Cloudinary. It needs to be re-uploaded with public access.')
+      }
+      
+      // Open the document
+      window.open(doc.file_url, '_blank')
+    } catch (error) {
+      console.error('❌ Invalid URL:', error)
+      alert('❌ Invalid document URL')
+    }
+  }
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-ZA', {
       style: 'currency',
@@ -565,7 +599,7 @@ export default function AdminDashboard() {
                             <p className="text-xs text-gray-600 mb-3">{doc.file_name}</p>
                             <div className="flex gap-2">
                               <button
-                                onClick={() => window.open(doc.file_url, '_blank')}
+                                onClick={() => handleViewDocument(doc)}
                                 className="flex-1 flex items-center justify-center gap-1 bg-blue-50 text-blue-600 py-2 rounded text-sm hover:bg-blue-100"
                               >
                                 <Eye size={14} />
@@ -663,7 +697,7 @@ export default function AdminDashboard() {
               <div>
                 <p className="text-sm text-gray-600">File</p>
                 <button
-                  onClick={() => window.open(selectedDoc.file_url, '_blank')}
+                  onClick={() => handleViewDocument(selectedDoc)}
                   className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-semibold"
                 >
                   <Download size={16} />
