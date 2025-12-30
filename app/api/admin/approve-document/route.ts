@@ -31,9 +31,8 @@ export async function POST(req: NextRequest) {
         .from('verification_documents')
         .update({
           status: 'approved',
-          reviewed_at: new Date().toISOString(),
-          reviewed_by: 'admin',
-          rejection_reason: null
+          reviewed_at: new Date().toISOString()
+          // Removed reviewed_by - let it be null or remove the column requirement
         })
         .eq('id', documentId)
 
@@ -61,8 +60,8 @@ export async function POST(req: NextRequest) {
         .update({
           status: 'rejected',
           reviewed_at: new Date().toISOString(),
-          reviewed_by: 'admin',
           rejection_reason: rejectionReason
+          // Removed reviewed_by
         })
         .eq('id', documentId)
 
