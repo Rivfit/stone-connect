@@ -32,18 +32,53 @@ export async function POST(req: NextRequest) {
     })
 
     // Prepare Ozow payment request
-    const amount = (cartTotal * 100).toFixed(0) // Ozow uses cents, no decimals
+    const amount = cartTotal.toFixed(2) // Ozow wants decimal format like "527.50"
+    const bankReference = `Order ${orderId.slice(0, 8)}`
+    const customerName = `${customer.firstName} ${customer.lastName}`
+    const optional1 = customer.email
+    const optional2 = customer.phone || ''
+    const optional3 = customer.address || ''
+    const optional4 = `${customer.city || ''} ${customer.postalCode || ''}`
+    const optional5 = ''
     const cancelUrl = `${baseUrl}/checkout/cancel`
     const errorUrl = `${baseUrl}/checkout/error`
     const successUrl = `${baseUrl}/checkout/success?orderId=${orderId}`
     const notifyUrl = `${baseUrl}/api/ozow/notify`
     
     // Generate hash for security
-    // Per Ozow docs: SiteCode + CountryCode + CurrencyCode + Amount + TransactionReference + BankReference + Optional1-5 + CancelUrl + ErrorUrl + SuccessUrl + NotifyUrl + IsTest + PrivateKey
-    // NOTE: Customer field is NOT included in hash!
-    const inputString = `${siteCode}${amount}${orderId}${cancelUrl}${errorUrl}${successUrl}${notifyUrl}${isTest}${privateKey}`
+    // Per Ozow docs: SiteCode + CountryCode + CurrencyCode + Amount + TransactionReference + BankReference + Optional1-5 + Customer + CancelUrl + ErrorUrl + SuccessUrl + NotifyUrl + IsTest + PrivateKey
+    const inputString = [
+      siteCode,
+      'ZA', // CountryCode
+      'ZAR', // CurrencyCode
+      amount,
+      orderId, // TransactionReference
+      bankReference,
+      optional1,
+      optional2,
+      optional3,
+      optional4,
+      optional5,
+      customerName, // Customer field IS included in hash
+      cancelUrl,
+      errorUrl,
+      successUrl,
+      notifyUrl,
+      isTest.toString(),
+      privateKey
+    ].join('')
     
-    console.log('Hash input string (without customer):', inputString)
+    console.log('Hash input components:', {
+      siteCode,
+      countryCode: 'ZA',
+      currencyCode: 'ZAR',
+      amount,
+      transactionRef: orderId,
+      bankRef: bankReference,
+      customer: customerName,
+      isTest: isTest.toString(),
+      inputStringLength: inputString.length
+    })
     
     const hashCheck = crypto
       .createHash('sha512')
@@ -57,35 +92,30 @@ export async function POST(req: NextRequest) {
       SiteCode: siteCode,
       CountryCode: 'ZA',
       CurrencyCode: 'ZAR',
-      Amount: amount,
+      Amount: parseFloat(amount), // Send as number
       TransactionReference: orderId,
-      BankReference: `Order ${orderId.slice(0, 8)}`,
-      Customer: `${customer.firstName} ${customer.lastName}`,
-      Optional1: customer.email,
-      Optional2: customer.phone || '',
-      Optional3: customer.address || '',
-      Optional4: `${customer.city || ''} ${customer.postalCode || ''}`,
-      Optional5: '',
+      BankReference: bankReference,
+      Customer: customerName,
+      Optional1: optional1,
+      Optional2: optional2,
+      Optional3: optional3,
+      Optional4: optional4,
+      Optional5: optional5,
       CancelUrl: cancelUrl,
       ErrorUrl: errorUrl,
       SuccessUrl: successUrl,
       NotifyUrl: notifyUrl,
-      IsTest: isTest.toString(),
+      IsTest: isTest,
       HashCheck: hashCheck
     }
 
     console.log('Ozow payment initiated:', {
       orderId,
       amount: cartTotal,
-      amountInCents: amount,
       customer: customer.email,
       isTest,
       siteCode,
-      hashCheck: hashCheck.substring(0, 20) + '...',
-      formData: {
-        ...ozowFormData,
-        HashCheck: hashCheck.substring(0, 20) + '...'
-      }
+      hashCheck: hashCheck.substring(0, 20) + '...'
     })
 
     // Return the form data - we'll POST it from the frontend
@@ -94,9 +124,7 @@ export async function POST(req: NextRequest) {
       formData: ozowFormData,
       orderId,
       // Ozow payment URL
-      ozowUrl: isTest 
-        ? 'https://pay.ozow.com/'
-        : 'https://pay.ozow.com/'
+      ozowUrl: 'https://pay.ozow.com/'
     })
 
   } catch (error) {
