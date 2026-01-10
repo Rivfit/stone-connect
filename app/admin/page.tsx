@@ -35,6 +35,8 @@ interface Order {
   retailers?: {
     business_name: string
   }
+  cart_items?: any[]
+  customer_data?: any
 }
 
 interface VerificationDoc {
@@ -121,31 +123,49 @@ export default function AdminDashboard() {
   const fetchOrders = async () => {
     try {
       const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          products (type, material),
-          retailers (business_name)
-        `)
+        .from('orders_main')
+        .select('*')
         .order('created_at', { ascending: false })
 
       if (error) throw error
 
-      setOrders(data || [])
+      // Transform data to match old format for display
+      const transformedOrders = data?.map(order => ({
+        id: order.id,
+        customer_email: order.customer_data?.email || 'N/A',
+        product_price: parseFloat(order.cart_total || 0),
+        commission: parseFloat(order.commission || 0),
+        platform_commission: parseFloat(order.commission || 0),
+        order_status: order.order_status || 'pending',
+        payment_status: order.payment_status || 'pending',
+        created_at: order.created_at,
+        // Extract product info from cart_items
+        products: {
+          type: order.cart_items?.[0]?.productType || 'Multiple items',
+          material: ''
+        },
+        retailers: {
+          business_name: order.retailer_email || 'N/A'
+        },
+        cart_items: order.cart_items,
+        customer_data: order.customer_data
+      })) || []
+
+      setOrders(transformedOrders)
 
       // Calculate stats
-      const totalRevenue = data?.reduce((sum, order) => 
-        sum + (order.product_price || 0), 0) || 0
+      const totalRevenue = transformedOrders.reduce((sum, order) => 
+        sum + (order.product_price || 0), 0)
       
-      const platformCommission = data?.reduce((sum, order) => 
-        sum + (order.commission || order.platform_commission || 0), 0) || 0
+      const platformCommission = transformedOrders.reduce((sum, order) => 
+        sum + (order.commission || 0), 0)
 
-      const completed = data?.filter(o => o.order_status === 'completed').length || 0
-      const pending = data?.filter(o => o.order_status === 'pending').length || 0
+      const completed = transformedOrders.filter(o => o.payment_status === 'paid').length
+      const pending = transformedOrders.filter(o => o.payment_status === 'pending').length
 
       setStats(prev => ({
         ...prev,
-        totalOrders: data?.length || 0,
+        totalOrders: transformedOrders.length,
         totalRevenue,
         platformCommission,
         completedOrders: completed,
@@ -257,7 +277,6 @@ export default function AdminDashboard() {
     }
   }
 
-  // UPDATED: Better document viewing with debugging
   const handleViewDocument = (doc: VerificationDoc) => {
     console.log('🔍 === DOCUMENT VIEW DEBUG ===')
     console.log('📄 Full document object:', doc)
@@ -277,13 +296,11 @@ export default function AdminDashboard() {
       console.log('  - Path:', url.pathname)
       console.log('  - Full URL:', url.href)
       
-      // Check if URL has "authenticated" in path (which causes 401)
       if (url.pathname.includes('/authenticated/')) {
         console.warn('⚠️ WARNING: URL contains /authenticated/ - this will cause 401 error!')
         alert('⚠️ This document is set as private in Cloudinary. It needs to be re-uploaded with public access.')
       }
       
-      // Open the document
       window.open(doc.file_url, '_blank')
     } catch (error) {
       console.error('❌ Invalid URL:', error)
@@ -543,11 +560,11 @@ export default function AdminDashboard() {
                           </td>
                           <td className="px-4 py-3 text-sm">
                             <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                              order.order_status === 'completed' ? 'bg-green-100 text-green-800' :
-                              order.order_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              order.payment_status === 'paid' ? 'bg-green-100 text-green-800' :
+                              order.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                               'bg-gray-100 text-gray-800'
                             }`}>
-                              {order.order_status}
+                              {order.payment_status}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-600">
