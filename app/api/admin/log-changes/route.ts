@@ -52,6 +52,8 @@ export async function POST(req: NextRequest) {
               <ul>
                 <li><strong>Bank:</strong> ${banking?.bank_name || 'N/A'}</li>
                 <li><strong>Account Holder:</strong> ${banking?.account_holder || 'N/A'}</li>
+                <li><strong>Account Number:</strong> ${banking?.account_number || 'N/A'}</li>
+                <li><strong>Branch Code:</strong> ${banking?.branch_code || 'N/A'}</li>
                 <li><strong>Account Type:</strong> ${banking?.account_type || 'N/A'}</li>
               </ul>
               
