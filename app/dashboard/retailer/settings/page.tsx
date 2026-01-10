@@ -232,6 +232,8 @@ export default function RetailerSettingsPage() {
           banking: {
             bank_name: retailerData.bank_name,
             account_holder: retailerData.account_holder,
+            account_number: retailerData.account_number,
+            branch_code: retailerData.branch_code,
             account_type: retailerData.account_type
           },
           timestamp: new Date().toISOString()
