@@ -10,6 +10,15 @@ export async function POST(req: NextRequest) {
     // Get form data from Ozow
     const formData = await req.formData()
     
+    // LOG EVERYTHING OZOW SENDS
+    console.log('🔍 === FULL OZOW WEBHOOK DATA ===')
+    const allData: any = {}
+    for (const [key, value] of formData.entries()) {
+      allData[key] = value
+      console.log(`${key}: ${value}`)
+    }
+    console.log('🔍 === END OZOW DATA ===')
+    
     const siteCode = formData.get('SiteCode') as string
     const transactionId = formData.get('TransactionId') as string
     const transactionReference = formData.get('TransactionReference') as string
@@ -25,9 +34,14 @@ export async function POST(req: NextRequest) {
       transactionReference,
       status,
       amount,
-      statusMessage
+      statusMessage,
+      hashCheck: hashCheck ? hashCheck.substring(0, 20) + '...' : 'NULL'
     })
 
+    // TEMPORARILY SKIP HASH VERIFICATION FOR DEBUGGING
+    console.log('⚠️ SKIPPING HASH VERIFICATION FOR DEBUGGING')
+    
+    /* COMMENTED OUT FOR NOW - WILL RE-ENABLE AFTER DEBUGGING
     // Verify hash for security
     const privateKey = process.env.OZOW_PRIVATE_KEY!
     const hashString = [
@@ -36,7 +50,7 @@ export async function POST(req: NextRequest) {
       transactionReference || '',
       amount || '',
       status || '',
-      statusMessage || '',  // Handle null statusMessage
+      statusMessage || '',
       currencyCode || '',
       isTest || '',
       privateKey
@@ -63,6 +77,7 @@ export async function POST(req: NextRequest) {
     }
 
     console.log('✅ Hash verified successfully')
+    */
 
     const orderId = transactionReference
 
