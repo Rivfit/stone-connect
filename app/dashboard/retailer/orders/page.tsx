@@ -9,28 +9,17 @@ import { ShoppingBag, Eye, Phone, Mail, Package, Clock, CheckCircle, XCircle, Al
 
 interface Order {
   id: string
-  customer_id: string
-  retailer_id: string
-  product_id: string
-  selected_color: string
-  deceased_name: string
-  custom_message?: string
-  product_price: number
-  platform_commission: number
+  customer_data: any
+  cart_items: any[]
+  cart_total: number
+  commission: number
   retailer_payout: number
   payment_status: string
   payment_id?: string
   order_status: string
-  customer_email: string
-  customer_phone: string
+  retailer_email: string
   created_at: string
   updated_at: string
-  commission: number
-  products?: {
-    type: string
-    material: string
-    images?: string[]
-  }
 }
 
 export default function OrdersPage() {
@@ -57,19 +46,12 @@ export default function OrdersPage() {
     if (!retailer) return
 
     try {
-      console.log('Fetching orders for retailer:', retailer.id)
+      console.log('Fetching orders for retailer:', retailer.email)
       
       const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          products (
-            type,
-            material,
-            images
-          )
-        `)
-        .eq('retailer_id', retailer.id)
+        .from('orders_main')
+        .select('*')
+        .eq('retailer_email', retailer.email)
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -77,7 +59,7 @@ export default function OrdersPage() {
         throw error
       }
 
-      console.log('Orders fetched:', data?.length || 0)
+      console.log('Orders fetched:', data?.length || 0, data)
       setOrders(data || [])
     } catch (error) {
       console.error('Error fetching orders:', error)
@@ -92,6 +74,7 @@ export default function OrdersPage() {
         return 'bg-yellow-100 text-yellow-800 border-yellow-300'
       case 'processing':
         return 'bg-blue-100 text-blue-800 border-blue-300'
+      case 'paid':
       case 'completed':
         return 'bg-green-100 text-green-800 border-green-300'
       case 'cancelled':
@@ -107,6 +90,7 @@ export default function OrdersPage() {
         return <Clock className="text-yellow-600" size={20} />
       case 'processing':
         return <Package className="text-blue-600" size={20} />
+      case 'paid':
       case 'completed':
         return <CheckCircle className="text-green-600" size={20} />
       case 'cancelled':
@@ -135,13 +119,13 @@ export default function OrdersPage() {
 
   const filteredOrders = filterStatus === 'all' 
     ? orders 
-    : orders.filter(order => order.order_status.toLowerCase() === filterStatus)
+    : orders.filter(order => order.payment_status.toLowerCase() === filterStatus)
 
   const orderStats = {
     total: orders.length,
-    pending: orders.filter(o => o.order_status.toLowerCase() === 'pending').length,
-    completed: orders.filter(o => o.order_status.toLowerCase() === 'completed').length,
-    cancelled: orders.filter(o => o.order_status.toLowerCase() === 'cancelled').length,
+    pending: orders.filter(o => o.payment_status.toLowerCase() === 'pending').length,
+    completed: orders.filter(o => o.payment_status.toLowerCase() === 'paid').length,
+    cancelled: orders.filter(o => o.payment_status.toLowerCase() === 'cancelled').length,
     totalRevenue: orders
       .filter(o => o.payment_status.toLowerCase() === 'paid')
       .reduce((sum, o) => sum + o.retailer_payout, 0)
@@ -213,9 +197,9 @@ export default function OrdersPage() {
               Pending ({orderStats.pending})
             </button>
             <button 
-              onClick={() => setFilterStatus('completed')}
+              onClick={() => setFilterStatus('paid')}
               className={`pb-4 px-1 border-b-2 font-medium transition-colors ${
-                filterStatus === 'completed' 
+                filterStatus === 'paid' 
                   ? 'border-blue-600 text-blue-600' 
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
@@ -254,111 +238,94 @@ export default function OrdersPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredOrders.map((order) => (
-              <div key={order.id} className="bg-white rounded-xl shadow-lg border-2 border-gray-200 overflow-hidden hover:shadow-xl transition-shadow">
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-start gap-4">
-                      {/* Product Image */}
-                      <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                        {order.products?.images && order.products.images.length > 0 ? (
-                          <img 
-                            src={order.products.images[0]} 
-                            alt={order.products.type}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-3xl">
-                            🪦
-                          </div>
-                        )}
-                      </div>
+            {filteredOrders.map((order) => {
+              const firstItem = order.cart_items?.[0] || {}
+              const customer = order.customer_data || {}
+              
+              return (
+                <div key={order.id} className="bg-white rounded-xl shadow-lg border-2 border-gray-200 overflow-hidden hover:shadow-xl transition-shadow">
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-start gap-4">
+                        {/* Product Icon */}
+                        <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center text-4xl">
+                          🪦
+                        </div>
 
-                      {/* Order Info */}
-                      <div>
-                        <h3 className="text-lg font-bold mb-1">
-                          {order.products?.type || 'Product'} - {order.products?.material || 'Material'}
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-1">
-                          Order #{order.id.slice(0, 8)}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {formatDate(order.created_at)}
-                        </p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold border-2 flex items-center gap-1 ${getStatusColor(order.order_status)}`}>
-                            {getStatusIcon(order.order_status)}
-                            {order.order_status}
-                          </span>
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            order.payment_status.toLowerCase() === 'paid' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            Payment: {order.payment_status}
-                          </span>
+                        {/* Order Info */}
+                        <div>
+                          <h3 className="text-lg font-bold mb-1">
+                            {firstItem.productType || 'Product'} {firstItem.selectedColor ? `(${firstItem.selectedColor})` : ''}
+                          </h3>
+                          <p className="text-sm text-gray-600 mb-1">
+                            Order #{order.id.slice(0, 8)}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {formatDate(order.created_at)}
+                          </p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold border-2 flex items-center gap-1 ${getStatusColor(order.payment_status)}`}>
+                              {getStatusIcon(order.payment_status)}
+                              {order.payment_status}
+                            </span>
+                            {order.cart_items && order.cart_items.length > 1 && (
+                              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                                {order.cart_items.length} items
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
+
+                      {/* Price Info */}
+                      <div className="text-right">
+                        <p className="text-sm text-gray-600 mb-1">Your Payout</p>
+                        <p className="text-2xl font-bold text-green-600">
+                          {formatPrice(order.retailer_payout)}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Total: {formatPrice(order.cart_total)}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Commission: {formatPrice(order.commission)}
+                        </p>
+                      </div>
                     </div>
 
-                    {/* Price Info */}
-                    <div className="text-right">
-                      <p className="text-sm text-gray-600 mb-1">Your Payout</p>
-                      <p className="text-2xl font-bold text-green-600">
-                        {formatPrice(order.retailer_payout)}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Product: {formatPrice(order.product_price)}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Commission: {formatPrice(order.commission || order.platform_commission)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Customer & Product Details */}
-                  <div className="grid md:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
-                    <div>
+                    {/* Customer Details */}
+                    <div className="pt-4 border-t border-gray-200">
                       <p className="text-sm font-semibold text-gray-700 mb-2">Customer Details:</p>
                       <div className="space-y-1 text-sm text-gray-600">
                         <p className="flex items-center gap-2">
                           <Mail size={14} />
-                          {order.customer_email}
+                          {customer.email || 'N/A'}
                         </p>
                         <p className="flex items-center gap-2">
                           <Phone size={14} />
-                          {order.customer_phone}
+                          {customer.phone || 'N/A'}
                         </p>
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-semibold text-gray-700 mb-2">Order Details:</p>
-                      <div className="space-y-1 text-sm text-gray-600">
-                        <p><strong>In Memory of:</strong> {order.deceased_name}</p>
-                        <p><strong>Selected Color:</strong> {order.selected_color}</p>
-                        {order.custom_message && (
-                          <p className="text-xs italic bg-gray-50 p-2 rounded mt-2">
-                            "{order.custom_message}"
+                        {customer.address && (
+                          <p className="text-xs text-gray-500">
+                            {customer.address}, {customer.city}, {customer.postalCode}
                           </p>
                         )}
                       </div>
                     </div>
-                  </div>
 
-                  {/* Action Button */}
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <button
-                      onClick={() => setSelectedOrder(order)}
-                      className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-semibold text-sm"
-                    >
-                      <Eye size={16} />
-                      View Full Details
-                    </button>
+                    {/* Action Button */}
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <button
+                        onClick={() => setSelectedOrder(order)}
+                        className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-semibold text-sm"
+                      >
+                        <Eye size={16} />
+                        View Full Details
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
@@ -378,75 +345,59 @@ export default function OrdersPage() {
             </div>
 
             <div className="p-6 space-y-6">
-              <div className="flex items-center gap-4">
-                <div className="w-32 h-32 bg-gray-100 rounded-lg overflow-hidden">
-                  {selectedOrder.products?.images && selectedOrder.products.images.length > 0 ? (
-                    <img 
-                      src={selectedOrder.products.images[0]} 
-                      alt={selectedOrder.products.type}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-5xl">
-                      🪦
+              <div>
+                <h3 className="text-xl font-bold mb-2">Order ID: {selectedOrder.id}</h3>
+                <p className="text-gray-600">Created: {formatDate(selectedOrder.created_at)}</p>
+              </div>
+
+              {/* Cart Items */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-bold mb-3">Order Items</h4>
+                <div className="space-y-3">
+                  {selectedOrder.cart_items?.map((item: any, index: number) => (
+                    <div key={index} className="flex justify-between items-center">
+                      <div>
+                        <p className="font-semibold">{item.productType}</p>
+                        <p className="text-sm text-gray-600">Color: {item.selectedColor}</p>
+                      </div>
+                      <p className="font-semibold">{formatPrice(item.basePrice)}</p>
                     </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Customer Info */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-bold mb-3">Customer Information</h4>
+                <div className="space-y-2 text-sm">
+                  <p><strong>Name:</strong> {selectedOrder.customer_data?.firstName} {selectedOrder.customer_data?.lastName}</p>
+                  <p className="flex items-center gap-2">
+                    <Mail size={16} className="text-gray-400" />
+                    {selectedOrder.customer_data?.email}
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <Phone size={16} className="text-gray-400" />
+                    {selectedOrder.customer_data?.phone}
+                  </p>
+                  {selectedOrder.customer_data?.address && (
+                    <p className="text-gray-600">
+                      {selectedOrder.customer_data.address}, {selectedOrder.customer_data.city}, {selectedOrder.customer_data.postalCode}
+                    </p>
                   )}
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold mb-2">
-                    {selectedOrder.products?.type} - {selectedOrder.products?.material}
-                  </h3>
-                  <p className="text-gray-600">Order ID: {selectedOrder.id}</p>
-                  <p className="text-gray-600">Created: {formatDate(selectedOrder.created_at)}</p>
-                </div>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-bold mb-3">Customer Information</h4>
-                  <div className="space-y-2 text-sm">
-                    <p className="flex items-center gap-2">
-                      <Mail size={16} className="text-gray-400" />
-                      {selectedOrder.customer_email}
-                    </p>
-                    <p className="flex items-center gap-2">
-                      <Phone size={16} className="text-gray-400" />
-                      {selectedOrder.customer_phone}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-bold mb-3">Order Information</h4>
-                  <div className="space-y-2 text-sm">
-                    <p><strong>In Memory of:</strong> {selectedOrder.deceased_name}</p>
-                    <p><strong>Color:</strong> {selectedOrder.selected_color}</p>
-                    <p><strong>Status:</strong> 
-                      <span className={`ml-2 px-2 py-1 rounded text-xs ${getStatusColor(selectedOrder.order_status)}`}>
-                        {selectedOrder.order_status}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {selectedOrder.custom_message && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="font-bold mb-2">Custom Message</h4>
-                  <p className="text-sm italic">"{selectedOrder.custom_message}"</p>
-                </div>
-              )}
-
+              {/* Payment Breakdown */}
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <h4 className="font-bold mb-3">Payment Breakdown</h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span>Product Price:</span>
-                    <span className="font-semibold">{formatPrice(selectedOrder.product_price)}</span>
+                    <span>Order Total:</span>
+                    <span className="font-semibold">{formatPrice(selectedOrder.cart_total)}</span>
                   </div>
                   <div className="flex justify-between text-red-600">
-                    <span>Platform Commission:</span>
-                    <span className="font-semibold">-{formatPrice(selectedOrder.commission || selectedOrder.platform_commission)}</span>
+                    <span>Platform Commission (10%):</span>
+                    <span className="font-semibold">-{formatPrice(selectedOrder.commission)}</span>
                   </div>
                   <div className="flex justify-between pt-2 border-t border-green-300 text-lg">
                     <span className="font-bold">Your Payout:</span>
