@@ -78,7 +78,7 @@ export default function AdminDashboard() {
   const [selectedDoc, setSelectedDoc] = useState<VerificationDoc | null>(null)
   const [reviewNote, setReviewNote] = useState('')
 
-  const ADMIN_PASSWORD = 'admin123' // Change this to your secure password
+  const ADMIN_PASSWORD = 'RERGLOBE123!!' // Change this to your secure password
 
   useEffect(() => {
     const auth = sessionStorage.getItem('admin_authenticated')

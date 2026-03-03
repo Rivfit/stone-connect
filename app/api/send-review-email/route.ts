@@ -6,18 +6,18 @@ export async function POST(request: NextRequest) {
   try {
     const { orderId, customerEmail, customerName, productName, retailerName } = await request.json()
 
-    // Create Nodemailer transporter (configure with your email settings)
+    // Create Nodemailer transporter
     const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST, // e.g., 'smtp.gmail.com'
+      host: process.env.EMAIL_HOST,
       port: parseInt(process.env.EMAIL_PORT || '587'),
-      secure: process.env.EMAIL_SECURE === 'true',
+      secure: false, // TLS for port 587
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
+        pass: process.env.EMAIL_PASS, // ✅ FIXED - was EMAIL_PASSWORD
       },
     })
 
-    const reviewUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/orders/${orderId}/review`
+    const reviewUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/orders/${orderId}/review`
 
     // Email HTML template
     const htmlContent = `
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
                         📞 +27 83 574 7160 | 📧 rerglobalventures@gmail.com
                       </p>
                       <p style="margin: 10px 0 0 0; font-size: 12px; color: #9ca3af;">
-                        <a href="${process.env.NEXT_PUBLIC_SITE_URL}" style="color: #2563eb; text-decoration: none;">Visit Stone Connect</a>
+                        <a href="${process.env.NEXT_PUBLIC_BASE_URL}" style="color: #2563eb; text-decoration: none;">Visit Stone Connect</a>
                       </p>
                     </td>
                   </tr>
@@ -113,7 +113,7 @@ Stone Connect Team
 
 Stone Connect - Connecting Families with Quality Memorial Retailers
 📞 +27 83 574 7160 | 📧 rerglobalventures@gmail.com
-Visit us: ${process.env.NEXT_PUBLIC_SITE_URL}
+Visit us: ${process.env.NEXT_PUBLIC_BASE_URL}
     `
 
     // Send email
@@ -148,7 +148,7 @@ export async function sendReviewEmail(orderData: {
   retailerName: string
 }) {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/send-review-email`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/send-review-email`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
