@@ -75,7 +75,6 @@ export default function ManageProductsPage() {
       
       if (error) throw error
 
-      // Check if all required documents are approved
       const hasAllApproved = data && data.length >= 3 && 
         data.every(doc => doc.status === 'approved')
       
@@ -420,6 +419,262 @@ export default function ManageProductsPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Product Modal */}
+      {editingProduct && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Edit Product</h2>
+              <button
+                onClick={() => setEditingProduct(null)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateSubmit} className="p-6 space-y-6">
+              {/* Image Upload Section */}
+              <div className="border-2 border-dashed border-gray-300 rounded-xl p-6">
+                <label className="block font-semibold mb-3 text-gray-700">
+                  Product Images
+                </label>
+                
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageUpload}
+                  disabled={uploadingImages}
+                  className="hidden"
+                  id="edit-image-upload"
+                />
+                
+                <label
+                  htmlFor="edit-image-upload"
+                  className={`flex flex-col items-center justify-center py-8 cursor-pointer hover:bg-gray-50 rounded-lg transition-colors ${
+                    uploadingImages ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
+                  <Upload className="text-blue-600 mb-3" size={48} />
+                  <p className="text-lg font-semibold text-gray-700 mb-1">
+                    {uploadingImages ? 'Uploading...' : 'Click to upload images'}
+                  </p>
+                  <p className="text-sm text-gray-500">PNG, JPG up to 10MB each</p>
+                </label>
+
+                {uploadedImages.length > 0 && (
+                  <div className="mt-6 grid grid-cols-3 gap-4">
+                    {uploadedImages.map((url, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={url}
+                          alt={`Product ${index + 1}`}
+                          className="w-full h-32 object-cover rounded-lg border-2 border-gray-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block font-semibold mb-2 text-gray-700">
+                    Product Type *
+                  </label>
+                  <input
+                    type="text"
+                    name="type"
+                    required
+                    value={editFormData.type}
+                    onChange={handleEditChange}
+                    className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold mb-2 text-gray-700">
+                    Material *
+                  </label>
+                  <select
+                    name="material"
+                    required
+                    value={editFormData.material}
+                    onChange={handleEditChange}
+                    className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
+                  >
+                    <option value="">Select material</option>
+                    <option value="Black Granite">Black Granite</option>
+                    <option value="Grey Granite">Grey Granite</option>
+                    <option value="Red Granite">Red Granite</option>
+                    <option value="White Marble">White Marble</option>
+                    <option value="Rose Marble">Rose Marble</option>
+                    <option value="Sandstone">Sandstone</option>
+                    <option value="Limestone">Limestone</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block font-semibold mb-2 text-gray-700">
+                    Available Colors (comma separated) *
+                  </label>
+                  <input
+                    type="text"
+                    name="colors"
+                    required
+                    value={editFormData.colors}
+                    onChange={handleEditChange}
+                    className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold mb-2 text-gray-700">
+                    Price (R) *
+                  </label>
+                  <input
+                    type="number"
+                    name="basePrice"
+                    required
+                    min="1000"
+                    step="100"
+                    value={editFormData.basePrice}
+                    onChange={handleEditChange}
+                    className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Installation Section */}
+              <div className="border-2 border-blue-200 bg-blue-50 rounded-xl p-6">
+                <h3 className="font-bold text-lg mb-4 text-gray-800">Installation Options</h3>
+                
+                <div className="mb-4">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="installationIncluded"
+                      checked={editFormData.installationIncluded}
+                      onChange={handleEditChange}
+                      className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                    <span className="font-semibold text-gray-700">
+                      Installation is included in the product price
+                    </span>
+                  </label>
+                </div>
+
+                {!editFormData.installationIncluded && (
+                  <div className="space-y-4 mt-4 pl-8 border-l-4 border-blue-300">
+                    <div>
+                      <label className="block font-semibold mb-2 text-gray-700">
+                        Installation Pricing Option *
+                      </label>
+                      <select
+                        name="installationOption"
+                        value={editFormData.installationOption}
+                        onChange={handleEditChange}
+                        className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none bg-white"
+                      >
+                        <option value="range">Price Range</option>
+                        <option value="contact">Contact for Quote</option>
+                      </select>
+                    </div>
+
+                    {editFormData.installationOption === 'range' && (
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block font-semibold mb-2 text-gray-700">
+                            Min Price (R) *
+                          </label>
+                          <input
+                            type="number"
+                            name="installationPriceMin"
+                            required={!editFormData.installationIncluded && editFormData.installationOption === 'range'}
+                            min="0"
+                            step="100"
+                            value={editFormData.installationPriceMin}
+                            onChange={handleEditChange}
+                            className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-semibold mb-2 text-gray-700">
+                            Max Price (R) *
+                          </label>
+                          <input
+                            type="number"
+                            name="installationPriceMax"
+                            required={!editFormData.installationIncluded && editFormData.installationOption === 'range'}
+                            min="0"
+                            step="100"
+                            value={editFormData.installationPriceMax}
+                            onChange={handleEditChange}
+                            className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-2 text-gray-700">
+                  Description *
+                </label>
+                <textarea
+                  name="description"
+                  required
+                  value={editFormData.description}
+                  onChange={handleEditChange}
+                  className="w-full border-2 p-3 rounded-lg focus:border-blue-500 outline-none resize-none"
+                  rows={5}
+                />
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => setEditingProduct(null)}
+                  className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting || uploadingImages}
+                  className="flex-1 bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <Check size={20} />
+                      Update Product
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
