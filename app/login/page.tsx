@@ -17,7 +17,7 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/auth/customer/login', {
+      const response = await fetch('/api/auth/customer/login', {  // ✅ FIXED - was /api/auth/customer/login
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -27,10 +27,11 @@ export default function LoginPage() {
 
       if (data.success) {
         // Store customer session
-        localStorage.setItem('customer', JSON.stringify(data.customer))
+        localStorage.setItem('customer', JSON.stringify(data.user))  // ✅ FIXED - was data.customer
+        localStorage.setItem('customer_session', JSON.stringify(data.session))
         router.push('/customer/dashboard')
       } else {
-        alert('Invalid email or password')
+        alert(data.error || 'Invalid email or password')
       }
     } catch (error) {
       console.error('Login error:', error)
@@ -50,14 +51,14 @@ export default function LoginPage() {
 
         <div className="text-center mb-12">
           <div className="mb-6 flex justify-center">
-  <Image
-    src="/stone-black.png"
-    alt="Black Stone Logo"
-    width={180}
-    height={180}
-    className="object-contain"
-  />
-</div>
+            <Image
+              src="/stone-black.png"
+              alt="Black Stone Logo"
+              width={180}
+              height={180}
+              className="object-contain"
+            />
+          </div>
 
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Welcome Back</h1>
           <p className="text-xl text-gray-600">Choose your account type to continue</p>

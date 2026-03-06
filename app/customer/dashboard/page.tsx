@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase/client'
 import Navbar from '@/app/components/Navbar'
 import Footer from '@/app/components/Footer'
 import { Package, Clock, CheckCircle, XCircle, User, MapPin, Mail, Phone } from 'lucide-react'
@@ -20,34 +21,47 @@ export default function CustomerDashboard() {
       return
     }
 
-    setCustomer(JSON.parse(customerData))
-    fetchOrders()
+    const parsedCustomer = JSON.parse(customerData)
+    setCustomer(parsedCustomer)
+    fetchOrders(parsedCustomer.email)
   }, [router])
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (customerEmail: string) => {
     try {
-      // TODO: Fetch actual orders from API
-      // For now, mock data
-      setOrders([
-        {
-          id: 'ORD-001',
-          date: '2025-01-15',
-          status: 'processing',
-          total: 15000,
-          items: 'Granite Headstone - Black',
-          retailer: 'Premium Memorials'
-        },
-        {
-          id: 'ORD-002',
-          date: '2024-12-20',
-          status: 'completed',
-          total: 8500,
-          items: 'Marble Memorial Plaque',
-          retailer: 'Stone Masters'
-        }
-      ])
+      console.log('Fetching orders for customer:', customerEmail)
+      
+      const { data, error } = await supabase
+        .from('orders_main')
+        .select('*')
+        .contains('customer_data', { email: customerEmail })
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error fetching orders:', error)
+        throw error
+      }
+
+      console.log('Orders fetched:', data?.length || 0)
+
+      // Transform orders to match display format
+      const transformedOrders = data?.map(order => ({
+        id: order.id,
+        date: order.created_at,
+        status: order.payment_status === 'paid' ? 'completed' : 'processing',
+        total: parseFloat(order.cart_total),
+        items: order.cart_items?.map((item: any) => item.productType).join(', ') || 'Products',
+        retailer: order.retailer_email,
+        cart_items: order.cart_items,
+        customer_data: order.customer_data,
+        payment_status: order.payment_status,
+        commission: order.commission,
+        retailer_payout: order.retailer_payout
+      })) || []
+
+      setOrders(transformedOrders)
     } catch (error) {
       console.error('Error fetching orders:', error)
+      setOrders([])
     } finally {
       setLoading(false)
     }
@@ -86,8 +100,17 @@ export default function CustomerDashboard() {
     }).format(price)
   }
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-ZA', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
+  }
+
   const handleLogout = () => {
     localStorage.removeItem('customer')
+    localStorage.removeItem('customer_session')
     router.push('/')
   }
 
@@ -159,6 +182,9 @@ export default function CustomerDashboard() {
                     <div>
                       <label className="text-sm text-gray-600 block">Address</label>
                       <p className="font-semibold text-sm">{customer.address}</p>
+                      {customer.city && customer.postalCode && (
+                        <p className="text-sm text-gray-600">{customer.city}, {customer.postalCode}</p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -181,6 +207,12 @@ export default function CustomerDashboard() {
                   <span className="text-gray-700">Active Orders</span>
                   <span className="font-bold text-xl text-yellow-600">
                     {orders.filter(o => o.status === 'processing').length}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                  <span className="text-gray-700">Completed</span>
+                  <span className="font-bold text-xl text-green-600">
+                    {orders.filter(o => o.status === 'completed').length}
                   </span>
                 </div>
               </div>
@@ -210,8 +242,8 @@ export default function CustomerDashboard() {
                     <div key={order.id} className="border-2 border-gray-200 rounded-lg p-6 hover:border-blue-300 transition-colors">
                       <div className="flex justify-between items-start mb-4">
                         <div>
-                          <h3 className="font-bold text-lg">Order #{order.id}</h3>
-                          <p className="text-sm text-gray-600">{new Date(order.date).toLocaleDateString()}</p>
+                          <h3 className="font-bold text-lg">Order #{order.id.slice(0, 8)}</h3>
+                          <p className="text-sm text-gray-600">{formatDate(order.date)}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           {getStatusIcon(order.status)}
@@ -223,19 +255,43 @@ export default function CustomerDashboard() {
 
                       <div className="space-y-2 mb-4">
                         <p className="text-gray-700">
-                          <strong>Item:</strong> {order.items}
+                          <strong>Items:</strong> {order.items}
                         </p>
+                        {order.cart_items && order.cart_items.length > 0 && (
+                          <div className="pl-4 space-y-1">
+                            {order.cart_items.map((item: any, idx: number) => (
+                              <p key={idx} className="text-sm text-gray-600">
+                                • {item.productType} ({item.selectedColor}) - {formatPrice(item.basePrice)}
+                              </p>
+                            ))}
+                          </div>
+                        )}
                         <p className="text-gray-700">
                           <strong>Retailer:</strong> {order.retailer}
                         </p>
                         <p className="text-gray-700">
-                          <strong>Total:</strong> <span className="text-green-600 font-bold">{formatPrice(order.total)}</span>
+                          <strong>Total:</strong> <span className="text-green-600 font-bold text-xl">{formatPrice(order.total)}</span>
                         </p>
+                        {order.payment_status && (
+                          <p className="text-sm">
+                            <strong>Payment Status:</strong>{' '}
+                            <span className={order.payment_status === 'paid' ? 'text-green-600 font-semibold' : 'text-yellow-600 font-semibold'}>
+                              {order.payment_status.toUpperCase()}
+                            </span>
+                          </p>
+                        )}
                       </div>
 
-                      <button className="text-blue-600 hover:text-blue-800 font-semibold text-sm">
-                        View Details →
-                      </button>
+                      <div className="flex gap-2">
+                        <button className="text-blue-600 hover:text-blue-800 font-semibold text-sm">
+                          View Details →
+                        </button>
+                        {order.status === 'completed' && (
+                          <button className="text-purple-600 hover:text-purple-800 font-semibold text-sm ml-auto">
+                            Leave Review
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
