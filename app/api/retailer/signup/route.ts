@@ -123,8 +123,8 @@ export async function POST(req: NextRequest) {
                 <h3 style="color: #1f2937;">Need Help?</h3>
                 <p style="color: #4b5563;">
                   Our support team is here to assist you:<br>
-                  📧 Email: support@stoneconnect.co.za<br>
-                  📞 Phone: +27 12 345 6789
+                  📧 Email: rerglobalventures@gmail.com<br>
+                  📞 Phone: +27 83 574 7160
                 </p>
 
                 <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">

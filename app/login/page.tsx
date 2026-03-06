@@ -189,27 +189,8 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
-
-        {/* Demo Credentials */}
-        <div className="mt-8 p-6 bg-yellow-50 border-2 border-yellow-200 rounded-xl max-w-2xl mx-auto">
-          <h3 className="font-bold text-lg mb-2 text-gray-900">🔐 Demo Access</h3>
-          <p className="text-sm text-gray-700 mb-3">
-            For testing purposes, you can use these demo credentials:
-          </p>
-          <div className="grid md:grid-cols-2 gap-4 text-sm">
-            <div className="bg-white p-3 rounded">
-              <p className="font-semibold text-blue-600">Customer Demo:</p>
-              <p>Email: customer@demo.com</p>
-              <p>Password: demo123</p>
-            </div>
-            <div className="bg-white p-3 rounded">
-              <p className="font-semibold text-purple-600">Retailer Demo:</p>
-              <p>Email: retailer@demo.com</p>
-              <p>Password: demo123</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+       </div>
+     </div>
+        
   )
 }
