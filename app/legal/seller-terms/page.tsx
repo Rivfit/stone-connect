@@ -109,7 +109,7 @@ export default function SellerTermsPage() {
             <section>
               <h2 className="text-2xl font-bold mb-4">8. Payment & Payouts</h2>
               <p>
-                Payments are processed through PayFast or other approved gateways.
+                Payments are processed through Ozow or other approved gateways.
               </p>
               <p>Stone Connect may:</p>
               <ul className="list-disc pl-6 space-y-2">
@@ -125,7 +125,7 @@ export default function SellerTermsPage() {
               <p>Sellers agree to pay:</p>
               <ul className="list-disc pl-6 space-y-2">
                 <li>Platform commission (10% for free accounts, 8% for premium)</li>
-                <li>Transaction fees (from PayFast or others)</li>
+                <li>Transaction fees (from Ozow or others)</li>
                 <li>Any penalties for breach of Terms</li>
               </ul>
               <p>Fee structures are provided during onboarding.</p>

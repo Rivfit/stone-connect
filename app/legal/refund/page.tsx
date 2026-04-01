@@ -32,7 +32,7 @@ export default function RefundPage() {
               <p>If approved:</p>
               <ul className="list-disc pl-6 space-y-2">
                 <li>A full or partial refund will be processed within 3–7 business days</li>
-                <li>Refunds are issued via the original payment method (PayFast, etc.)</li>
+                <li>Refunds are issued via the original payment method (Ozow, etc.)</li>
               </ul>
             </section>
 
@@ -113,7 +113,7 @@ export default function RefundPage() {
               <h2 className="text-2xl font-bold mb-4">Contact Information</h2>
               <p>
                 Stone Connect / RER Global Ventures (Pty) Ltd<br/>
-                Email: rerglobalventures@gmail.coma<br/>
+                Email: rerglobalventures@gmail.com<br/>
                 Phone: +27 83 574 7160
               </p>
             </section>

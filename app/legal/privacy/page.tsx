@@ -43,7 +43,7 @@ export default function PrivacyPage() {
               </ul>
               <p>
                 <strong>Payment information (card details) is NOT stored by us</strong> and is handled securely 
-                by third-party processors (e.g., PayFast).
+                by third-party processors (e.g., Ozow).
               </p>
             </section>
 
@@ -67,7 +67,7 @@ export default function PrivacyPage() {
               <p>Your information may be shared with:</p>
               <ul className="list-disc pl-6 space-y-2">
                 <li>Sellers fulfilling your order</li>
-                <li>Payment processors (e.g., PayFast)</li>
+                <li>Payment processors (e.g., Ozow)</li>
                 <li>Delivery/installation partners (through Sellers)</li>
                 <li>Service providers that help us operate the platform</li>
                 <li>Authorities if legally required</li>
